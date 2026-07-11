@@ -105,6 +105,24 @@ python scripts\run_scenario_eval.py
 python main.py
 ```
 
+## 배포용 exe 빌드 (PyInstaller)
+
+개발 환경(Python/venv) 없이 더블클릭으로 실행되는 단일 실행파일을 만들 수 있다.
+
+```powershell
+pip install pyinstaller
+pyinstaller --onefile --windowed --name UnityAIAssistant --add-data "data;data" main.py
+# 결과물: dist\UnityAIAssistant.exe (약 55MB, venv/python 설치 없이 독립 실행)
+```
+
+- `--add-data "data;data"`가 필요한 이유: `core/rag.py`가 스니펫 JSON을 `__file__` 기준
+  상대 경로로 읽기 때문에, 번들에도 `data/` 폴더가 실행파일과 같은 상대 위치에 있어야 한다.
+- `--windowed`(콘솔 없음) 모드라 `print()` 메시지가 보이지 않는다. 전역 단축키 등록 실패 같은
+  런타임 메시지는 오버레이 상태 표시줄로도 함께 노출하도록 `main.py`/`ui/overlay_window.py`를
+  손봤다.
+- `build/`, `dist/`, `*.spec`은 재생성 가능한 산출물이라 `.gitignore`에서 제외했다
+  (단, `UnityAIAssistant.spec`은 빌드 옵션 재현을 위해 커밋해둔다).
+
 ## 남은 작업 (원래 1주 일정 기준, Day 1~3은 이 세션에서 완료)
 
 | 일자 | 상태 | 남은 작업 |

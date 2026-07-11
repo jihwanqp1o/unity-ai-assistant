@@ -97,7 +97,9 @@ class UnityAssistantApp:
         try:
             self.hotkey.start(self.on_capture)
         except Exception as e:  # noqa: BLE001
-            print(f"전역 단축키 등록 실패(계속 진행, 캡처 버튼은 정상 동작): {e}")
+            message = f"전역 단축키 등록 실패(캡처 버튼은 정상 동작): {e}"
+            print(message)
+            overlay.set_status(f"● {message}")
 
         overlay.show()
         exit_code = app.exec_()
