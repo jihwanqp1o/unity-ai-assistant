@@ -1,0 +1,50 @@
+[
+  {
+    "id": "scn-01",
+    "question": "점프가 두 번 눌려도 한 번만 되는데 왜 그런지 화면 보고 알려줘",
+    "expected_snippet_id": "movement-jump-grounded",
+    "note": "Q6 성공지표 데모 시나리오 1 - isGrounded 갱신 시점 문제"
+  },
+  {
+    "id": "scn-02",
+    "question": "플레이어 스프라이트를 바꿨더니 충돌체 위치가 이상해요, BoxCollider2D가 벗어난 것 같아요",
+    "expected_snippet_id": "collider-offset-mismatch",
+    "note": "Q6 성공지표 데모 시나리오 2 - Collider offset 불일치"
+  },
+  {
+    "id": "scn-03",
+    "question": "이동은 되는데 걷는 애니메이션이 전혀 재생이 안 돼요, 콘솔에 에러도 없어요",
+    "expected_snippet_id": "animator-not-connected",
+    "note": "Q6 성공지표 데모 시나리오 3 - AnimatorController 미연결"
+  },
+  {
+    "id": "scn-04",
+    "question": "UI 버튼을 눌러도 아무 반응이 없어요, OnClick 이벤트가 아예 안 불려요",
+    "expected_snippet_id": "eventsystem-missing",
+    "note": "Q6 성공지표 데모 시나리오 4 - EventSystem 누락"
+  },
+  {
+    "id": "scn-05",
+    "question": "적이 많아지면 프레임이 뚝뚝 떨어지는데 Update()마다 GetComponent를 계속 호출하고 있어요",
+    "expected_snippet_id": "getcomponent-caching",
+    "note": "Q6 성공지표 데모 시나리오 5 - GetComponent 캐싱 누락"
+  },
+  {
+    "id": "scn-06",
+    "question": "총알을 계속 Instantiate하고 Destroy 했더니 슈팅할 때마다 렉이 걸려요",
+    "expected_snippet_id": "object-pooling",
+    "note": "Q6 성공지표 데모 시나리오 6 - 오브젝트 풀링 필요"
+  },
+  {
+    "id": "scn-07",
+    "question": "캐릭터 이동이 가끔 끊기는 느낌이에요, Update 안에서 Rigidbody velocity를 수정하고 있어요",
+    "expected_snippet_id": "update-vs-fixedupdate",
+    "note": "Q6 성공지표 데모 시나리오 7 - Update/FixedUpdate 오용"
+  },
+  {
+    "id": "scn-08",
+    "question": "예전 튜토리얼 코드를 그대로 썼더니 rb.velocity에서 컴파일 에러가 나요, Unity 6인데 왜 그런가요",
+    "expected_snippet_id": "unity6-move-and-slide-note",
+    "note": "Q6 성공지표 데모 시나리오 8 - Unity 6 API 변경(velocity -> linearVelocity)"
+  }
+]

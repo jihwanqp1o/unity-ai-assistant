@@ -1,0 +1,6 @@
+anthropic>=0.116.0
+PyQt5>=5.15
+mss>=9.0
+pillow>=10.0
+keyboard>=0.13
+pytest>=8.0

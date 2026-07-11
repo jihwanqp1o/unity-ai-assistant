@@ -1,0 +1,299 @@
+[
+  {
+    "id": "movement-charactercontroller",
+    "title": "CharacterController 기반 이동",
+    "category": "movement",
+    "keywords": ["charactercontroller", "이동", "move", "걷기", "달리기", "player movement"],
+    "snippet": "CharacterController.Move(Vector3 motion)는 매 프레임 상대 이동량을 받는다. Transform을 직접 수정하지 말고 반드시 Move()로 이동시켜야 충돌 처리가 정상 동작한다.",
+    "source": "Unity Docs: CharacterController.Move",
+    "pitfall": "Update()에서 Time.deltaTime을 곱하지 않으면 프레임레이트에 따라 속도가 달라짐."
+  },
+  {
+    "id": "movement-rigidbody-velocity",
+    "title": "Rigidbody 속도 기반 이동",
+    "category": "movement",
+    "keywords": ["rigidbody", "velocity", "물리 이동", "addforce"],
+    "snippet": "rb.velocity(2021 이전) / rb.linearVelocity(Unity 6 이상)로 속도를 직접 설정하거나 AddForce()로 힘을 가한다. FixedUpdate() 안에서만 물리 값을 수정해야 한다.",
+    "source": "Unity Docs: Rigidbody",
+    "pitfall": "Update()에서 물리값을 수정하면 프레임 드랍 시 물리 시뮬레이션이 불안정해짐."
+  },
+  {
+    "id": "movement-jump-grounded",
+    "title": "점프 & 접지 판정",
+    "category": "movement",
+    "keywords": ["jump", "점프", "isgrounded", "접지", "이중 점프"],
+    "snippet": "Physics.CheckSphere(groundCheck.position, radius, groundMask)로 접지를 판정한 뒤 isGrounded && Input.GetButtonDown(\"Jump\") 조건에서만 점프 속도를 부여한다.",
+    "source": "Unity Docs: Physics.CheckSphere",
+    "pitfall": "isGrounded를 OnCollisionStay에서만 갱신하면 프레임 사이 갱신 누락으로 점프가 씹히는 문제가 발생함."
+  },
+  {
+    "id": "input-system-actions",
+    "title": "새 Input System 액션 바인딩",
+    "category": "input",
+    "keywords": ["input system", "inputaction", "키 입력", "컨트롤러"],
+    "snippet": "InputActionAsset에서 액션을 정의하고 action.performed += ctx => {...} 콜백으로 처리한다. 레거시 Input.GetAxis와 혼용하지 않는다.",
+    "source": "Unity Docs: Input System package",
+    "pitfall": "Input System과 레거시 Input Manager를 동시에 활성화하면 프로젝트 설정 충돌 경고가 발생함."
+  },
+  {
+    "id": "input-legacy-axis",
+    "title": "레거시 Input.GetAxis",
+    "category": "input",
+    "keywords": ["input.getaxis", "horizontal", "vertical", "레거시 입력"],
+    "snippet": "Input.GetAxis(\"Horizontal\")은 -1~1 사이 값을 부드럽게 보간해 반환한다. 즉각 반응이 필요하면 GetAxisRaw()를 사용한다.",
+    "source": "Unity Docs: Input.GetAxis",
+    "pitfall": "GetAxis와 GetAxisRaw를 혼용하면 캐릭터 가속감이 일관되지 않게 느껴짐."
+  },
+  {
+    "id": "collision-2d-vs-3d",
+    "title": "2D/3D 충돌 콜백 구분",
+    "category": "collision",
+    "keywords": ["oncollisionenter", "ontriggerenter", "collider2d", "충돌", "트리거"],
+    "snippet": "2D 오브젝트는 OnCollisionEnter2D/OnTriggerEnter2D, 3D는 OnCollisionEnter/OnTriggerEnter를 사용한다. Collider와 Collider2D는 서로 상호작용하지 않는다.",
+    "source": "Unity Docs: 2D and 3D Physics",
+    "pitfall": "3D Rigidbody에 Collider2D를 붙이는 등 2D/3D 컴포넌트를 섞으면 충돌 콜백이 아예 호출되지 않음."
+  },
+  {
+    "id": "collider-offset-mismatch",
+    "title": "Collider 위치/크기 불일치",
+    "category": "collision",
+    "keywords": ["boxcollider2d", "offset", "충돌체 위치", "스프라이트 범위", "위치가 이상해요", "스프라이트를 바꿨더니", "범위를 벗어"],
+    "snippet": "BoxCollider2D.offset과 size는 스프라이트의 피벗 기준 상대 좌표다. 스프라이트를 교체한 뒤에는 Edit Collider로 범위를 다시 맞춰야 한다.",
+    "source": "Unity Docs: BoxCollider2D",
+    "pitfall": "피벗이 다른 스프라이트로 교체 시 충돌체가 시각적 범위를 벗어나는 경우가 흔함."
+  },
+  {
+    "id": "trigger-vs-solid",
+    "title": "Trigger와 Is Trigger 체크",
+    "category": "collision",
+    "keywords": ["istrigger", "트리거", "통과", "센서"],
+    "snippet": "Is Trigger를 켜면 물리적 충돌 없이 겹침만 감지되어 OnTriggerEnter가 호출된다. 두 콜라이더 모두 Rigidbody가 있거나 최소 하나는 Rigidbody가 있어야 콜백이 발생한다.",
+    "source": "Unity Docs: Collider.isTrigger",
+    "pitfall": "양쪽 다 Static Collider(Rigidbody 없음)면 트리거 이벤트가 발생하지 않음."
+  },
+  {
+    "id": "animator-transitions",
+    "title": "Animator 트랜지션 조건",
+    "category": "animation",
+    "keywords": ["animator", "애니메이션", "트랜지션", "파라미터"],
+    "snippet": "Animator.SetFloat/SetBool/SetTrigger로 파라미터를 갱신하면 트랜지션 조건과 비교되어 상태가 전환된다. Has Exit Time을 끄지 않으면 현재 애니메이션이 끝날 때까지 전환이 지연된다.",
+    "source": "Unity Docs: Animation Transitions",
+    "pitfall": "이동 애니메이션이 늦게 바뀌는 문제는 대부분 Has Exit Time 체크 또는 Transition Duration 설정 때문."
+  },
+  {
+    "id": "animator-not-connected",
+    "title": "AnimatorController 미연결",
+    "category": "animation",
+    "keywords": ["animator controller", "애니메이션 재생 안됨", "미연결", "애니메이션이 전혀 재생이 안", "걷는 애니메이션", "재생이 안 돼요", "컨트롤러 연결"],
+    "snippet": "SpriteRenderer/Animator 컴포넌트는 있지만 Controller 필드에 AnimatorController 에셋이 비어 있으면 SetTrigger 등 호출이 조용히 무시된다.",
+    "source": "Unity Docs: Animator component",
+    "pitfall": "콘솔에 에러가 뜨지 않아 원인 파악이 어려운 대표적인 케이스."
+  },
+  {
+    "id": "camera-follow",
+    "title": "카메라 추적(Follow)",
+    "category": "camera",
+    "keywords": ["카메라 추적", "camera follow", "cinemachine"],
+    "snippet": "간단한 추적은 LateUpdate()에서 Vector3.Lerp(transform.position, target.position + offset, smoothTime)로 구현한다. 프로덕션에서는 Cinemachine Virtual Camera 사용을 권장.",
+    "source": "Unity Docs: Camera, Cinemachine",
+    "pitfall": "Update()에서 카메라를 이동시키면 플레이어보다 먼저/늦게 갱신되어 떨림(jitter) 현상이 발생함."
+  },
+  {
+    "id": "coroutine-waitforseconds",
+    "title": "코루틴과 WaitForSeconds",
+    "category": "core",
+    "keywords": ["coroutine", "코루틴", "waitforseconds", "지연 실행"],
+    "snippet": "IEnumerator 메서드를 StartCoroutine()으로 실행하고 yield return new WaitForSeconds(t)로 대기한다. 오브젝트가 비활성화되면 코루틴도 함께 정지된다.",
+    "source": "Unity Docs: Coroutines",
+    "pitfall": "SetActive(false) 직후 코루틴이 멈추는 것을 모르고 디버깅에 시간을 쓰는 경우가 많음."
+  },
+  {
+    "id": "update-vs-fixedupdate",
+    "title": "Update vs FixedUpdate",
+    "category": "core",
+    "keywords": ["update", "fixedupdate", "물리 업데이트", "프레임", "이동이 가끔 끊기는", "update 안에서 rigidbody", "update 안에서 velocity"],
+    "snippet": "Update()는 프레임마다, FixedUpdate()는 고정 간격(기본 0.02s)으로 호출된다. 입력 감지는 Update(), 물리 연산은 FixedUpdate()에서 처리한다.",
+    "source": "Unity Docs: Order of Execution",
+    "pitfall": "FixedUpdate에서 Input.GetButtonDown을 쓰면 짧은 입력을 놓칠 수 있음."
+  },
+  {
+    "id": "getcomponent-caching",
+    "title": "GetComponent 캐싱",
+    "category": "performance",
+    "keywords": ["getcomponent", "성능", "캐싱", "매 프레임 호출", "프레임이 뚝뚝", "적이 많아지면", "매 프레임 getcomponent"],
+    "snippet": "GetComponent<T>()는 비용이 있는 호출이므로 Awake()/Start()에서 한 번 캐싱해 필드에 저장하고, Update()에서는 캐싱된 참조를 재사용한다.",
+    "source": "Unity Docs: Performance best practices",
+    "pitfall": "Update()나 _process 루프 안에서 매 프레임 GetComponent/get_node를 호출하면 프레임 드랍 원인이 됨."
+  },
+  {
+    "id": "object-pooling",
+    "title": "오브젝트 풀링",
+    "category": "performance",
+    "keywords": ["object pool", "오브젝트 풀링", "instantiate destroy 반복", "슈팅할 때마다 렉", "총알을 계속", "instantiate하고 destroy"],
+    "snippet": "총알·이펙트처럼 빈번히 생성/제거되는 오브젝트는 Instantiate/Destroy 대신 미리 생성해 두고 SetActive로 재사용하는 풀링 패턴을 사용한다.",
+    "source": "Unity Docs: Object pooling",
+    "pitfall": "매 프레임 Instantiate/Destroy를 반복하면 GC 스파이크로 인한 프레임 드랍이 발생함."
+  },
+  {
+    "id": "scriptableobject-data",
+    "title": "ScriptableObject 데이터 컨테이너",
+    "category": "architecture",
+    "keywords": ["scriptableobject", "데이터 에셋", "설정 분리"],
+    "snippet": "무기 스탯, 아이템 정보 등 순수 데이터는 MonoBehaviour 대신 ScriptableObject로 분리하면 씬 의존 없이 에셋으로 재사용할 수 있다.",
+    "source": "Unity Docs: ScriptableObject",
+    "pitfall": "런타임에 ScriptableObject 필드를 직접 수정하면 에디터에서 값이 영구적으로 바뀌어버리는 부작용이 있음(인스턴스화 필요)."
+  },
+  {
+    "id": "singleton-pattern",
+    "title": "싱글톤 매니저 패턴",
+    "category": "architecture",
+    "keywords": ["싱글톤", "singleton", "게임매니저", "static instance"],
+    "snippet": "public static T Instance 필드를 Awake()에서 할당하고 DontDestroyOnLoad(gameObject)로 씬 전환 시에도 유지한다.",
+    "source": "Unity 커뮤니티 베스트 프랙티스",
+    "pitfall": "씬마다 매니저 오브젝트가 중복 생성되면 Instance 참조가 꼬여 예기치 않은 버그가 발생함."
+  },
+  {
+    "id": "scenemanager-load",
+    "title": "씬 전환(SceneManager)",
+    "category": "core",
+    "keywords": ["scenemanager", "씬 전환", "loadscene"],
+    "snippet": "SceneManager.LoadScene(name) 또는 LoadSceneAsync(name)로 씬을 전환한다. 비동기 로딩 중 진행률은 AsyncOperation.progress로 확인한다.",
+    "source": "Unity Docs: SceneManager",
+    "pitfall": "DontDestroyOnLoad로 유지한 오브젝트가 씬 전환 후 중복 생성되지 않도록 중복 체크 로직이 필요함."
+  },
+  {
+    "id": "playerprefs-save",
+    "title": "PlayerPrefs 간단 저장",
+    "category": "save",
+    "keywords": ["playerprefs", "저장", "간단 세이브"],
+    "snippet": "PlayerPrefs.SetInt/SetFloat/SetString + Save()로 간단한 설정값을 저장한다. 복잡한 세이브 데이터는 JsonUtility로 직렬화 후 파일로 저장하는 것을 권장.",
+    "source": "Unity Docs: PlayerPrefs",
+    "pitfall": "PlayerPrefs는 평문 저장이라 민감한 데이터(치트 방지 필요값) 저장에는 부적합."
+  },
+  {
+    "id": "json-save-load",
+    "title": "JsonUtility 세이브/로드",
+    "category": "save",
+    "keywords": ["jsonutility", "세이브 로드", "직렬화"],
+    "snippet": "JsonUtility.ToJson(obj)/FromJson<T>(json)으로 [System.Serializable] 클래스를 직렬화한다. File.WriteAllText로 Application.persistentDataPath에 저장한다.",
+    "source": "Unity Docs: JsonUtility",
+    "pitfall": "Dictionary는 직렬화가 안 되므로 List<KeyValuePair> 등으로 변환해야 함."
+  },
+  {
+    "id": "raycast-basic",
+    "title": "Raycast 기본 사용",
+    "category": "physics",
+    "keywords": ["raycast", "레이캐스트", "시야", "감지"],
+    "snippet": "Physics.Raycast(origin, direction, out hit, distance, layerMask)로 특정 방향의 충돌을 감지한다. layerMask로 불필요한 레이어와의 충돌을 걸러낸다.",
+    "source": "Unity Docs: Physics.Raycast",
+    "pitfall": "layerMask를 지정하지 않으면 자기 자신의 콜라이더와 충돌해 오작동하는 경우가 흔함."
+  },
+  {
+    "id": "vector-angle-dot",
+    "title": "각도 계산 - dot product",
+    "category": "math",
+    "keywords": ["dot product", "각도 계산", "vector2.angle", "시야각"],
+    "snippet": "두 방향 벡터의 정규화 후 Vector3.Dot()으로 내적을 구하면 각도 코사인 값을 얻는다. 시야각 판정처럼 매 프레임 반복되는 계산은 각도 함수보다 내적 비교가 더 가볍다.",
+    "source": "Unity Docs: Vector3.Dot",
+    "pitfall": "Vector2.Angle()은 내부적으로 Acos 연산을 포함해 dot product 비교보다 느림."
+  },
+  {
+    "id": "layers-tags",
+    "title": "Layer와 Tag 구분",
+    "category": "core",
+    "keywords": ["layer", "tag", "레이어", "태그"],
+    "snippet": "Tag는 오브젝트 식별(\"Player\", \"Enemy\")에, Layer는 물리 충돌/카메라 렌더링 필터링에 사용한다. CompareTag()가 문자열 비교(==)보다 성능이 좋다.",
+    "source": "Unity Docs: Tags and Layers",
+    "pitfall": "gameObject.tag == \"Player\" 형태의 문자열 비교를 매 프레임 많이 호출하면 성능 저하가 누적됨."
+  },
+  {
+    "id": "canvas-scaling",
+    "title": "UI Canvas Scaler 설정",
+    "category": "ui",
+    "keywords": ["canvas scaler", "해상도 대응", "ui 깨짐"],
+    "snippet": "Canvas Scaler를 Scale With Screen Size로 설정하고 Reference Resolution을 기준 해상도로 지정하면 다양한 화면 비율에서 UI 크기가 일관되게 유지된다.",
+    "source": "Unity Docs: Canvas Scaler",
+    "pitfall": "Constant Pixel Size 모드로 두면 해상도가 다른 기기에서 UI 크기가 제각각으로 보임."
+  },
+  {
+    "id": "eventsystem-missing",
+    "title": "EventSystem 누락",
+    "category": "ui",
+    "keywords": ["eventsystem", "버튼 클릭 안됨", "ui 반응 없음", "버튼을 눌러도", "아무 반응이 없어요", "onclick", "이벤트가 아예 안"],
+    "snippet": "씬에 EventSystem 오브젝트가 없으면 Button, Toggle 등 UI 이벤트가 전혀 발생하지 않는다. Canvas 생성 시 자동 추가되지만 삭제되었는지 확인이 필요하다.",
+    "source": "Unity Docs: EventSystem",
+    "pitfall": "버튼이 눌리지 않는 문제의 상당수가 EventSystem 부재 또는 중복임."
+  },
+  {
+    "id": "audio-source-basics",
+    "title": "AudioSource 재생",
+    "category": "audio",
+    "keywords": ["audiosource", "사운드 재생", "playoneshot"],
+    "snippet": "짧은 효과음은 AudioSource.PlayOneShot(clip)으로, 배경음처럼 계속 재생되는 사운드는 clip을 지정 후 Play()/loop=true로 재생한다.",
+    "source": "Unity Docs: AudioSource",
+    "pitfall": "PlayOneShot 중첩 재생 시 볼륨이 과도하게 커질 수 있어 볼륨 조절이 필요함."
+  },
+  {
+    "id": "particle-system-basics",
+    "title": "ParticleSystem 재생 제어",
+    "category": "vfx",
+    "keywords": ["particlesystem", "파티클", "이펙트"],
+    "snippet": "ps.Play()/Stop()으로 재생을 제어하고, Stop Action을 Callback으로 설정하면 파티클 종료 시 이벤트를 받아 오브젝트를 정리할 수 있다.",
+    "source": "Unity Docs: ParticleSystem",
+    "pitfall": "Destroy(gameObject)를 파티클 재생 직후 바로 호출하면 파티클이 끝까지 재생되지 못하고 잘림."
+  },
+  {
+    "id": "tilemap-basics",
+    "title": "Tilemap 충돌/렌더링",
+    "category": "tilemap",
+    "keywords": ["tilemap", "타일맵", "타일 충돌"],
+    "snippet": "Tilemap Collider 2D + Composite Collider 2D 조합을 사용하면 개별 타일마다 콜라이더가 생기는 대신 하나의 병합된 콜라이더로 최적화된다.",
+    "source": "Unity Docs: Tilemap",
+    "pitfall": "Composite Collider를 빼먹으면 타일 개수만큼 콜라이더가 생겨 성능 저하가 발생함."
+  },
+  {
+    "id": "navmesh-agent",
+    "title": "NavMeshAgent 경로 이동",
+    "category": "ai",
+    "keywords": ["navmesh", "navmeshagent", "길찾기", "경로 이동"],
+    "snippet": "agent.SetDestination(targetPos)로 목적지를 지정하면 자동으로 경로를 계산해 이동한다. NavMesh는 사전에 Bake 되어 있어야 한다.",
+    "source": "Unity Docs: NavMeshAgent",
+    "pitfall": "씬에 NavMesh를 Bake하지 않으면 SetDestination이 조용히 무시됨."
+  },
+  {
+    "id": "prefab-instantiate",
+    "title": "Prefab 인스턴스화",
+    "category": "core",
+    "keywords": ["instantiate", "프리팹", "생성"],
+    "snippet": "Instantiate(prefab, position, rotation)로 프리팹을 복제한다. 부모를 지정하려면 Instantiate(prefab, parent) 오버로드를 사용한다.",
+    "source": "Unity Docs: Object.Instantiate",
+    "pitfall": "prefab 원본 자체를 씬에 직접 배치해 수정하면 프리팹 에셋 자체가 변경될 수 있음(Prefab Mode 주의)."
+  },
+  {
+    "id": "state-machine-pattern",
+    "title": "상태 머신 패턴 (if/elif 과다)",
+    "category": "architecture",
+    "keywords": ["state machine", "상태 머신", "if elif 체인", "복잡한 상태 분기"],
+    "snippet": "if/elif 체인이 5단계 이상 길어지면 enum 기반 상태 머신이나 인터페이스 기반 State 클래스로 리팩터링해 각 상태의 Enter/Update/Exit을 분리한다.",
+    "source": "게임 아키텍처 베스트 프랙티스",
+    "pitfall": "상태 분기가 늘어날수록 if/elif 체인은 유지보수가 급격히 어려워짐."
+  },
+  {
+    "id": "onready-node-cache",
+    "title": "매 프레임 노드 재탐색 방지",
+    "category": "performance",
+    "keywords": ["get_node 반복", "재탐색", "onready", "노드 캐싱"],
+    "snippet": "_process()/Update()마다 GetComponent나 노드 탐색을 반복하지 말고, 시작 시점에 한 번 참조를 캐싱해 필드에 저장한다.",
+    "source": "성능 베스트 프랙티스",
+    "pitfall": "탐색 비용이 누적되면 오브젝트 수가 늘어날수록 프레임 드랍이 심해짐."
+  },
+  {
+    "id": "unity6-move-and-slide-note",
+    "title": "Unity 6 물리 API 변경 주의",
+    "category": "migration",
+    "keywords": ["unity 6", "버전 변경", "api deprecated", "마이그레이션"],
+    "snippet": "Unity 6에서 Rigidbody.velocity는 Rigidbody.linearVelocity로 이름이 바뀌었다(구버전 코드/문서 참고 시 주의). 프로젝트의 Unity 버전을 먼저 확인해야 한다.",
+    "source": "Unity 6 Migration Guide",
+    "pitfall": "구버전 튜토리얼 코드를 그대로 붙여넣으면 최신 버전에서 컴파일 에러가 발생함."
+  }
+]
