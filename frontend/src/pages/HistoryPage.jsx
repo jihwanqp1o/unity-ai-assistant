@@ -11,11 +11,23 @@ const STATUS_LABELS = {
 };
 
 export default function HistoryPage() {
-  const [sessions, setSessions] = useState([]);
+  const [sessions, setSessions] = useState(null); // null = 아직 안 불러옴 (빈 목록과 구분)
 
   useEffect(() => {
-    api.listSessions().then(setSessions).catch(() => {});
+    api
+      .listSessions()
+      .then(setSessions)
+      .catch(() => setSessions([]));
   }, []);
+
+  if (sessions === null) {
+    return (
+      <div className="app-shell">
+        <h2>캡처 히스토리</h2>
+        <p style={{ color: "#9aa0a6" }}>불러오는 중...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell">

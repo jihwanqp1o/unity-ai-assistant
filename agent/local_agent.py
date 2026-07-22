@@ -98,6 +98,15 @@ class LocalCaptureAgent:
             return
 
         self._set_status(f"대기 중 ({CAPTURE_HOTKEY})")
+        # 창이 없는 백그라운드 프로그램이라 실행됐는지 알기 어려우므로, 준비가 끝나면
+        # 눈에 보이는 알림을 한 번 띄운다 — 핫키가 어렵다는 피드백이 있어 트레이 메뉴로도
+        # 캡처할 수 있다는 것을 여기서 같이 알린다.
+        self._icon.notify(
+            f"Unity AI Assistant가 실행 중입니다.\n"
+            f"캡처하려면 {CAPTURE_HOTKEY}를 누르거나, 트레이 아이콘을 우클릭해 "
+            f"'지금 캡처'를 선택하세요.",
+            "Unity AI Assistant 준비 완료",
+        )
 
     def _notify_pair_url(self, pair_url: str) -> None:
         self._icon.notify(
