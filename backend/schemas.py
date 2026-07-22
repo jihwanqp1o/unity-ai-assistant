@@ -1,6 +1,7 @@
 """backend/schemas.py — API 요청/응답 Pydantic 모델."""
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -47,6 +48,7 @@ class SessionOut(BaseModel):
     code_paste: Optional[str] = None
     answer: Optional[str] = None
     status: str
+    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 

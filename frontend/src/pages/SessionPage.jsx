@@ -5,6 +5,7 @@ import ChatLog from "../components/ChatLog";
 import CodePanel from "../components/CodePanel";
 import StatusBadge from "../components/StatusBadge";
 import { extractFirstCodeBlock } from "../lib/codeBlock";
+import { formatDateTime } from "../lib/format";
 
 export default function SessionPage() {
   const { id } = useParams();
@@ -64,7 +65,7 @@ export default function SessionPage() {
   return (
     <div className="app-shell">
       <div className="top-row">
-        <span className="section-label">세션 {id.slice(0, 8)}</span>
+        <span className="section-label">{formatDateTime(session.created_at)} 캡처</span>
         <StatusBadge text={status} />
       </div>
       {session.screenshot_b64 && (
