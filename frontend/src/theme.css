@@ -1,0 +1,164 @@
+/* 기존 ui/overlay_window.py의 다크테마(STYLESHEET)를 CSS로 이식 */
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: #1e1f22;
+  color: #e6e6e6;
+  font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+  font-size: 14px;
+}
+
+button {
+  background-color: #2b2d31;
+  border: 1px solid #3f4147;
+  border-radius: 6px;
+  padding: 7px 14px;
+  color: inherit;
+  cursor: pointer;
+  font-size: inherit;
+}
+button:hover {
+  background-color: #35373c;
+  border-color: #3fb950;
+}
+button:active {
+  background-color: #26282c;
+}
+button:disabled {
+  color: #6b6e73;
+  border-color: #2c2d30;
+  cursor: default;
+}
+
+input,
+textarea {
+  background-color: #26282c;
+  border: 1px solid #3f4147;
+  border-radius: 6px;
+  padding: 8px;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+}
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: #3fb950;
+}
+
+a {
+  color: #58a6ff;
+}
+
+.section-label {
+  color: #9aa0a6;
+  font-weight: 600;
+}
+
+.app-shell {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.status-label {
+  margin-left: auto;
+  font-weight: 600;
+}
+
+.chat-log {
+  overflow-y: auto;
+  background-color: #26282c;
+  border: 1px solid #3f4147;
+  border-radius: 6px;
+  padding: 10px;
+  min-height: 240px;
+  max-height: 420px;
+}
+.chat-message {
+  margin-bottom: 10px;
+  white-space: pre-wrap;
+}
+.chat-message .who {
+  font-weight: bold;
+}
+.chat-message .who.ai {
+  color: #3fb950;
+}
+
+.code-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.code-panel {
+  background-color: #26282c;
+  border: 1px solid #3f4147;
+  border-radius: 6px;
+  padding: 8px;
+  max-height: 160px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 12px;
+  min-height: 40px;
+}
+
+.bottom-row {
+  display: flex;
+  gap: 8px;
+}
+.bottom-row input {
+  flex: 1;
+}
+
+.error-text {
+  color: #f85149;
+}
+
+.form-card {
+  max-width: 360px;
+  margin: 80px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  border: 1px solid #3f4147;
+  border-radius: 8px;
+  background-color: #26282c;
+}
+
+.screenshot-preview {
+  max-width: 100%;
+  border-radius: 6px;
+  border: 1px solid #3f4147;
+}
+
+.session-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.session-list li {
+  padding: 10px;
+  border: 1px solid #3f4147;
+  border-radius: 6px;
+  background-color: #26282c;
+}

@@ -3,6 +3,15 @@
 개정 PRD(아산AX_개인PRD_4조_지환_개정판) 기준 구현. Unity 단일 엔진 · 온디맨드 스크린샷 ·
 라이트 RAG 기반 코드 어시스턴트.
 
+## 웹 전환 (2026-07-22)
+
+PyQt5 always-on-top 오버레이 단일 프로세스였던 앱을 **로컬 캡처 에이전트 + 배포형
+FastAPI 백엔드 + React 프론트엔드** 구조로 전환했다. 자세한 배경/아키텍처는 아래
+"폴더 구조"와 `CLAUDE.md`를 참고. 이전 `ui/overlay_window.py`, `main.py`,
+`UnityAIAssistant.spec`(PyQt5 exe 패키징)은 웹 UI로 대체되어 제거되었다.
+`core/rag.py`, `core/prompt_builder.py`, `core/claude_client.py`는 변경 없이 그대로
+백엔드에서 재사용되므로, 아래 "이 세션에서 한 일" / "RAG 정확도 이슈" 기록은 여전히 유효하다.
+
 ## 이 세션에서 한 일 / 못 한 일 (투명성을 위해 명시)
 
 이 프로젝트는 Cowork의 리눅스 헤드리스 샌드박스(디스플레이 없음)에서 작성되었다.
@@ -60,26 +69,34 @@ Q6 목표(80%)에 크게 못 미쳤다. 원인은 두 가지였다:
 
 ```
 unity-ai-assistant/
-├── main.py                  # 엔트리포인트 (RAG+캡처+단축키+오버레이 배선)
-├── config.py                 # 환경변수 기반 설정 (API 키, 단축키 등)
+├── config.py                  # 환경변수 기반 설정 (API 키, 단축키, FRONTEND/BACKEND_BASE_URL 등)
 ├── requirements.txt
-├── core/
-│   ├── rag.py                # 라이트 RAG (키워드 매칭, 외부 의존성 없음)
-│   ├── prompt_builder.py      # 프롬프트 조립 (외부 의존성 없음)
-│   ├── claude_client.py       # Claude API 래퍼 (real/mock)
-│   ├── capture.py             # 화면 캡처 (mss)
-│   └── hotkey.py               # 전역 단축키 (keyboard)
-├── ui/
-│   └── overlay_window.py      # PyQt5 오버레이 창
+├── Dockerfile                  # React 빌드 + FastAPI 서빙 멀티스테이지
+├── core/                        # 웹 전환 이후에도 변경 없이 그대로 재사용
+│   ├── rag.py                  # 라이트 RAG (키워드 매칭, 외부 의존성 없음)
+│   ├── prompt_builder.py        # 프롬프트 조립 (외부 의존성 없음)
+│   ├── claude_client.py         # Claude API 래퍼 (real/mock)
+│   ├── capture.py               # 화면 캡처 (mss) — agent/에서 사용
+│   └── hotkey.py                 # 전역 단축키 (keyboard) — agent/에서 사용
+├── agent/                       # 로컬 캡처 에이전트 (PyQt 없음, 백그라운드 콘솔 프로세스)
+│   ├── local_agent.py            # 핫키+캡처+세션 업로드+브라우저 오픈
+│   ├── pairing.py                 # device-code 페어링
+│   └── agent_config.py            # 페어링 토큰 로컬 저장
+├── backend/                     # 배포형 FastAPI 백엔드
+│   ├── app.py                    # 앱 진입점, 프론트 빌드 정적 서빙
+│   ├── auth.py                    # 회원가입/로그인 (JWT 쿠키)
+│   ├── devices.py                  # 기기 페어링 엔드포인트
+│   ├── sessions.py                  # 세션/스크린샷/질문 엔드포인트 (core/* 재사용)
+│   ├── models.py / db.py / security.py / schemas.py
+│   └── tests/test_flow.py          # signup→pair→session→ask e2e 테스트
+├── frontend/                    # React(Vite) 웹 UI
+│   └── src/{pages,components,lib}
 ├── data/
-│   ├── unity_snippets.json    # Unity 공식 문서 스니펫 33개
-│   └── test_scenarios.json    # 대표 에러 시나리오 8건 (Q6 성공지표 측정용)
+│   ├── unity_snippets.json      # Unity 공식 문서 스니펫 33개
+│   └── test_scenarios.json      # 대표 에러 시나리오 8건 (Q6 성공지표 측정용)
 ├── scripts/
-│   └── run_scenario_eval.py   # Q6 성공지표 자동 측정 스크립트
-└── tests/
-    ├── test_rag.py
-    ├── test_prompt_builder.py
-    └── test_claude_client_mock.py
+│   └── run_scenario_eval.py     # Q6 성공지표 자동 측정 스크립트
+└── tests/                        # core/* 단위 테스트 (웹 전환 영향 없음)
 ```
 
 ## VSCode에서 시작하기 (Windows)
@@ -90,38 +107,77 @@ python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
 
-# 1) 먼저 mock 모드로 파이프라인 자체가 도는지 확인 (API 키 불필요)
+# 1) 먼저 mock 모드로 RAG 파이프라인 자체가 도는지 확인 (API 키 불필요)
 python scripts\run_scenario_eval.py
 
-# 2) 단위 테스트
-pytest tests\ -v
+# 2) 단위 테스트 (core/* + backend/*)
+pytest tests\ backend\tests\ -v
 
-# 3) API 키 연결 후 real 모드로 전환
+# 3) 백엔드 실행 (FastAPI, 기본 포트 8000)
+uvicorn backend.app:app --reload --port 8000
+
+# 4) 프론트엔드 실행 (별도 터미널, 기본 포트 5173 — /api는 자동으로 백엔드로 프록시됨)
+cd frontend
+npm install
+npm run dev
+
+# 5) 로컬 캡처 에이전트 실행 (별도 터미널)
+python -m agent.local_agent
+# 최초 실행 시 브라우저가 열려 로그인+기기 승인을 요청한다. 이후 CAPTURE_HOTKEY(기본
+# Ctrl+Shift+C)를 누르면 화면을 캡처해 세션을 만들고 브라우저 탭을 연다.
+
+# 6) API 키 연결 후 real 모드로 전환 (백엔드 프로세스 기준)
 setx ANTHROPIC_API_KEY "sk-ant-..."
-# (새 터미널에서) 다시 실행하면 자동으로 real 모드로 전환됨
-python scripts\run_scenario_eval.py
-
-# 4) 전체 앱 실행 (PyQt 창 + 전역 단축키 + 실제 캡처)
-python main.py
+# (새 터미널에서 uvicorn을 다시 시작하면 자동으로 real 모드로 전환됨)
 ```
 
-## 배포용 exe 빌드 (PyInstaller)
+## 배포 (Docker)
 
-개발 환경(Python/venv) 없이 더블클릭으로 실행되는 단일 실행파일을 만들 수 있다.
+`Dockerfile`은 React 빌드 산출물을 FastAPI가 정적으로 서빙하는 단일 이미지를 만든다
+(프론트/백엔드가 같은 오리진이 되므로 운영 환경에서는 CORS 설정이 사실상 불필요하다).
 
 ```powershell
-pip install pyinstaller
-pyinstaller --onefile --windowed --name UnityAIAssistant --add-data "data;data" main.py
-# 결과물: dist\UnityAIAssistant.exe (약 55MB, venv/python 설치 없이 독립 실행)
+docker build -t unity-ai-assistant .
+docker run -p 8000:8000 `
+  -e ANTHROPIC_API_KEY=sk-ant-... `
+  -e JWT_SECRET=<32바이트 이상의 랜덤 문자열> `
+  -e FRONTEND_BASE_URL=https://<배포 도메인> `
+  -e BACKEND_BASE_URL=https://<배포 도메인> `
+  unity-ai-assistant
 ```
 
-- `--add-data "data;data"`가 필요한 이유: `core/rag.py`가 스니펫 JSON을 `__file__` 기준
-  상대 경로로 읽기 때문에, 번들에도 `data/` 폴더가 실행파일과 같은 상대 위치에 있어야 한다.
-- `--windowed`(콘솔 없음) 모드라 `print()` 메시지가 보이지 않는다. 전역 단축키 등록 실패 같은
-  런타임 메시지는 오버레이 상태 표시줄로도 함께 노출하도록 `main.py`/`ui/overlay_window.py`를
-  손봤다.
-- `build/`, `dist/`, `*.spec`은 재생성 가능한 산출물이라 `.gitignore`에서 제외했다
-  (단, `UnityAIAssistant.spec`은 빌드 옵션 재현을 위해 커밋해둔다).
+- 특정 PaaS(Render/Fly.io/Railway 등)는 지정하지 않았다 — 이 Dockerfile을 그대로 올리면 된다.
+- 기본 DB는 컨테이너 내 SQLite 파일(`backend/data/app.db`)이다. 컨테이너 재생성 시 데이터가
+  사라지므로, 영속 볼륨을 마운트하거나 `DATABASE_URL`로 외부 DB(Postgres 등)를 지정해야 한다.
+- 로컬 캡처 에이전트(`agent/local_agent.py`)는 배포 대상이 아니라 각 개발자의 Windows
+  머신에서 직접 실행하는 프로그램이다 — `BACKEND_BASE_URL` 환경변수로 배포된 백엔드를
+  가리키도록 설정한다.
+
+## Render에 실제 배포하기 (무료 티어 기준)
+
+`render.yaml`(Blueprint)이 준비되어 있어 계정만 만들면 대부분 자동으로 설정된다. 계정 생성·
+결제정보 등록·리포 연동 승인은 본인 확인이 필요한 단계라 직접 진행해야 한다.
+
+1. **Render 가입**: https://render.com → "Get Started" → GitHub 계정으로 가입(추천, 리포 연동이
+   자동으로 됨).
+2. **New + → Blueprint** 선택 → 이 리포(`jihwanqp1o/unity-ai-assistant`)를 GitHub 연동 목록에서
+   선택 (처음이면 Render GitHub App 설치/리포 접근 권한 승인 화면이 뜬다).
+3. Render가 `render.yaml`을 읽어 서비스 구성을 자동으로 보여준다 — 이름/플랜 확인 후 "Apply".
+4. 배포 중 `ANTHROPIC_API_KEY`를 입력하라는 칸이 뜬다 (`sync: false`라 리포에는 안 들어가고
+   Render 대시보드에만 저장됨). 아직 키가 없으면 비워두고 mock 모드로 우선 배포해도 된다 —
+   나중에 Render 대시보드 → Environment 탭에서 언제든 추가/변경 가능.
+5. 첫 배포가 끝나면 `https://unity-ai-assistant.onrender.com` (이름이 이미 쓰였다면 Render가
+   임의 접미사를 붙인 다른 주소)로 접속 가능해진다. **실제로 배정된 주소가 `render.yaml`의
+   `FRONTEND_BASE_URL`/`BACKEND_BASE_URL`과 다르면** Environment 탭에서 두 값을 실제 주소로
+   맞춰주고 "Manual Deploy" 재실행.
+6. 로컬 캡처 에이전트를 쓰는 각 개발자 PC에서는 `BACKEND_BASE_URL` 환경변수를 이 주소로
+   설정한 뒤 `python -m agent.local_agent`를 실행하면 된다.
+
+**무료 티어 특유의 제약** (알아두고 배포할 것):
+- 무료 웹 서비스는 일정 시간 요청이 없으면 슬립되고, 다음 요청 때 첫 응답이 수십 초 걸릴 수 있음.
+- 무료 티어는 영속 디스크를 지원하지 않아 **SQLite 파일이 재배포/재시작 시 초기화된다** — 계정과
+  캡처 히스토리가 사라진다는 뜻. 데이터를 유지하려면 유료 플랜의 Persistent Disk를 추가하거나,
+  `DATABASE_URL`을 Render의 무료 Postgres 애드온으로 바꾸는 것을 고려할 것.
 
 ## 남은 작업 (원래 1주 일정 기준, Day 1~3은 이 세션에서 완료)
 
@@ -138,6 +194,9 @@ pyinstaller --onefile --windowed --name UnityAIAssistant --add-data "data;data" 
 ## 알려진 제약 (A2 개정 PRD 부록 E 참조)
 
 - Vision API 비용·키 사전 확보 필요
-- PyQt always-on-top·투명도는 OS별 동작 차이 존재 (Windows 기준 검증 필요)
 - 원클릭 코드 적용은 클립보드 복사로 한정 (파일 자동 쓰기·Unity 프로젝트 직접 수정은 범위 밖)
 - 라이트 RAG는 스니펫 20~40개 범위 내에서만 정확 — 데모 시나리오 밖 질문은 정확도가 떨어질 수 있음
+- 기기 페어링 코드(`device_code`)에 만료 시간이 없음 — MVP 범위 결정, 운영 전환 시 TTL/재사용
+  방지 추가 필요 (`backend/devices.py` 참고)
+- 세션 스크린샷은 SQLite에 base64 텍스트로 저장 — 사용자·세션 수가 늘면 객체 스토리지(S3 등)로
+  옮기는 것을 고려해야 함

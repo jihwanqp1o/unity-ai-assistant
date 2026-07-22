@@ -19,3 +19,8 @@ CAPTURE_HOTKEY = os.environ.get("CAPTURE_HOTKEY", "ctrl+shift+c")
 # 라이트 RAG 매칭 파라미터
 RAG_TOP_K = 3
 RAG_MIN_SCORE = 1.0
+
+# 웹 전환: 배포된 프론트엔드/백엔드 기준 URL. 로컬 개발 시 각각 Vite(5173)/uvicorn(8000) 기본값.
+# 배포 환경에서는 실제 도메인으로 덮어쓴다 (프론트/백엔드가 같은 오리진이면 둘 다 동일 값으로 설정).
+FRONTEND_BASE_URL = os.environ.get("FRONTEND_BASE_URL", "http://localhost:5173")
+BACKEND_BASE_URL = os.environ.get("BACKEND_BASE_URL", "http://localhost:8000")

@@ -7,3 +7,9 @@ venv/
 .env
 build/
 dist/
+node_modules/
+backend/data/
+*.db
+
+# 로컬 에이전트 페어링 토큰 (Windows 실행 환경에서 생성됨, 리포에 커밋되면 안 됨)
+agent_config.json
