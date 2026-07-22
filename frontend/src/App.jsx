@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { api } from "./api";
+import HelpPage from "./pages/HelpPage";
 import HistoryPage from "./pages/HistoryPage";
 import LoginPage from "./pages/LoginPage";
 import PairPage from "./pages/PairPage";
@@ -32,6 +33,7 @@ export default function App() {
     <>
       <nav className="top-row" style={{ padding: "10px 16px", borderBottom: "1px solid #3f4147" }}>
         <Link to="/app/history">Unity AI Assistant</Link>
+        <Link to="/help">도움말</Link>
         <span style={{ marginLeft: "auto" }}>
           {user ? (
             <>
@@ -46,6 +48,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage onAuthed={setUser} />} />
         <Route path="/signup" element={<SignupPage onAuthed={setUser} />} />
         <Route path="/pair" element={<PairPage user={user} />} />
+        <Route path="/help" element={<HelpPage />} />
         <Route path="/app/session/:id" element={user ? <SessionPage /> : <Navigate to="/login" />} />
         <Route path="/app/history" element={user ? <HistoryPage /> : <Navigate to="/login" />} />
         <Route path="*" element={<Navigate to={user ? "/app/history" : "/login"} />} />
