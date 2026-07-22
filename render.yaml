@@ -1,3 +1,9 @@
+databases:
+  - name: unity-ai-assistant-db
+    plan: free # 90일 후 만료됨(Render 무료 Postgres 정책) — 만료 전 알림 오면 새로 만들어 연결
+    databaseName: unity_ai_assistant
+    user: unity_ai_assistant
+
 services:
   - type: web
     name: unity-ai-assistant
@@ -13,3 +19,7 @@ services:
         value: https://unity-ai-assistant.onrender.com
       - key: BACKEND_BASE_URL
         value: https://unity-ai-assistant.onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: unity-ai-assistant-db
+          property: connectionString

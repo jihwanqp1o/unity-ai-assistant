@@ -8,6 +8,7 @@ pytest>=8.0
 fastapi>=0.115
 uvicorn[standard]>=0.30
 sqlalchemy>=2.0
+psycopg2-binary>=2.9 # 배포 환경(Render Postgres)용 드라이버, 로컬 SQLite 기본 모드에서는 안 쓰임
 pyjwt>=2.9
 email-validator>=2.2
 httpx>=0.27
