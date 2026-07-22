@@ -45,7 +45,7 @@ uvicorn backend.app:app --reload --port 8000
 # Run the frontend dev server (proxies /api to the backend, see frontend/vite.config.js)
 cd frontend && npm install && npm run dev
 
-# Run the local capture agent (Windows, real hotkey + real screen capture)
+# Run the local capture agent (Windows, real hotkey + real screen capture + tray icon)
 python -m agent.local_agent
 # First run opens a browser for login + device pairing
 
@@ -59,6 +59,10 @@ python core\capture.py        # verify a real screenshot is captured
 # Build the deployable Docker image (React build + FastAPI serving it statically)
 docker build -t unity-ai-assistant .
 docker run -p 8000:8000 -e ANTHROPIC_API_KEY=sk-ant-... -e JWT_SECRET=<32+ random bytes> unity-ai-assistant
+
+# Build the local agent as a standalone Windows .exe + installer (see README's
+# "로컬 캡처 에이전트 설치 프로그램 만들기" for the Inno Setup step)
+pyinstaller --onefile --windowed --name UnityAIAssistantAgent agent_entry.py
 ```
 
 ## Architecture
@@ -76,15 +80,33 @@ core/capture.py (mss screenshot)  ──POST──▶   JWT cookie)
                                                                                     view, history
 ```
 
-1. **`agent/`** (local capture agent, PyQt-free, a console/background process) — reuses
-   `core/hotkey.py` and `core/capture.py` unchanged. Pairs with the backend once via a
-   device-code flow (`agent/pairing.py`, same pattern as `gh auth login`): the agent gets a
-   short `device_code`, opens the frontend's `/pair?code=...` page in the browser, the logged-in
+1. **`agent/`** (local capture agent, PyQt-free, a **system-tray-icon** background process,
+   see `agent/local_agent.py`'s `LocalCaptureAgent`) — reuses `core/hotkey.py` and
+   `core/capture.py` unchanged. Pairs with the backend once via a device-code flow
+   (`agent/pairing.py`, same pattern as `gh auth login`): the agent gets a short
+   `device_code`, opens the frontend's `/pair?code=...` page in the browser, the logged-in
    user approves it, and the agent polls until it receives a long-lived bearer token
    (stored via `agent/agent_config.py` in `%APPDATA%/UnityAIAssistant/agent_config.json`).
-   On hotkey trigger, it captures a screenshot, `POST /api/sessions` + `POST
-   /api/sessions/{id}/screenshot` to the backend, then opens the browser to the session's
-   web page. **The local agent never sees `ANTHROPIC_API_KEY`** — only the backend does.
+   On hotkey trigger (or the tray menu's "지금 캡처"), it captures a screenshot, `POST
+   /api/sessions` + `POST /api/sessions/{id}/screenshot` to the backend, then opens the
+   browser to the session's web page. **The local agent never sees `ANTHROPIC_API_KEY`**
+   — only the backend does.
+   - Uses `pystray` for the tray icon (status text as a disabled menu item, "지금 캡처",
+     "히스토리 열기", "종료") since the process has no window and would otherwise be
+     invisible to the user. Pairing and hotkey registration happen in a background thread
+     (`_bootstrap`) because `pystray.Icon.run()` blocks the main thread (a hard requirement
+     on Windows) — see `LocalCaptureAgent.run()`.
+   - Because it can be packaged `--windowed` (no console, see below), `agent/pairing.py`'s
+     `_log()` guards every `print()` behind an `if sys.stdout is not None` check — a frozen
+     windowed exe has `sys.stdout is None`, and an unguarded `print()` would crash it.
+   - **Packaging**: `agent_entry.py` (repo root, not inside `agent/`) is the PyInstaller
+     entry point — a thin wrapper so `agent.*`/`core.*`/`config` absolute imports resolve
+     correctly once frozen (mirrors where the old `main.py` used to live). `installer/agent.iss`
+     wraps the built `.exe` in an Inno Setup installer (Program Files install, Start Menu
+     shortcut, optional "run at Windows startup" task). If you touch any docstring/comment
+     in a `.py` file with a literal Windows path, watch out for `\U` (e.g. `dist\Unity...`)
+     — Python parses `\U` as the start of an 8-hex-digit unicode escape and throws a
+     `SyntaxError` at parse time, not just a display glitch; use forward slashes instead.
 2. **`backend/`** (FastAPI, meant to be deployed, not run locally-only) —
    - `auth.py`: email/password signup+login, JWT stored in an httpOnly cookie
      (`backend/security.py` — pbkdf2 password hashing, no external hashing dependency).

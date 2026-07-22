@@ -7,6 +7,8 @@ venv/
 .env
 build/
 dist/
+dist_installer/
+*.spec
 node_modules/
 backend/data/
 *.db

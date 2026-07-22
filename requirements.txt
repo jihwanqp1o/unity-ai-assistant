@@ -14,3 +14,7 @@ httpx>=0.27
 
 # local capture agent (calls the deployed backend)
 requests>=2.32
+pystray>=0.19
+
+# packaging-only (building the installable agent .exe, not needed to just run it)
+pyinstaller>=6.0

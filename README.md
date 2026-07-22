@@ -114,6 +114,10 @@ python scripts\run_scenario_eval.py
 pytest tests\ backend\tests\ -v
 
 # 3) 백엔드 실행 (FastAPI, 기본 포트 8000)
+# FRONTEND_BASE_URL/BACKEND_BASE_URL 기본값은 실제 배포된 Render 주소다 — 로컬 개발 중에는
+# 아래처럼 localhost로 덮어써야 pair_url/session_url이 로컬 프론트엔드를 가리킨다.
+$env:FRONTEND_BASE_URL = "http://localhost:5173"
+$env:BACKEND_BASE_URL = "http://localhost:8000"
 uvicorn backend.app:app --reload --port 8000
 
 # 4) 프론트엔드 실행 (별도 터미널, 기본 포트 5173 — /api는 자동으로 백엔드로 프록시됨)
@@ -121,7 +125,8 @@ cd frontend
 npm install
 npm run dev
 
-# 5) 로컬 캡처 에이전트 실행 (별도 터미널)
+# 5) 로컬 캡처 에이전트 실행 (별도 터미널, 위와 동일하게 localhost로 덮어써서 로컬 백엔드에 붙임)
+$env:BACKEND_BASE_URL = "http://localhost:8000"
 python -m agent.local_agent
 # 최초 실행 시 브라우저가 열려 로그인+기기 승인을 요청한다. 이후 CAPTURE_HOTKEY(기본
 # Ctrl+Shift+C)를 누르면 화면을 캡처해 세션을 만들고 브라우저 탭을 연다.
@@ -130,6 +135,10 @@ python -m agent.local_agent
 setx ANTHROPIC_API_KEY "sk-ant-..."
 # (새 터미널에서 uvicorn을 다시 시작하면 자동으로 real 모드로 전환됨)
 ```
+
+일반 사용자에게 배포하는 `agent/local_agent.py`(또는 아래 설치 프로그램)는 환경변수를 따로
+설정하지 않으면 `config.py`의 기본값 그대로 **실제 배포된 백엔드**(`https://unity-ai-assistant.onrender.com`)에
+연결된다 — 이 경우가 기본 시나리오이고, 위 로컬 오버라이드는 개발 중에만 쓴다.
 
 ## 배포 (Docker)
 
@@ -170,14 +179,42 @@ docker run -p 8000:8000 `
    임의 접미사를 붙인 다른 주소)로 접속 가능해진다. **실제로 배정된 주소가 `render.yaml`의
    `FRONTEND_BASE_URL`/`BACKEND_BASE_URL`과 다르면** Environment 탭에서 두 값을 실제 주소로
    맞춰주고 "Manual Deploy" 재실행.
-6. 로컬 캡처 에이전트를 쓰는 각 개발자 PC에서는 `BACKEND_BASE_URL` 환경변수를 이 주소로
-   설정한 뒤 `python -m agent.local_agent`를 실행하면 된다.
+6. 로컬 캡처 에이전트를 쓰는 각 개발자 PC에서는 `python -m agent.local_agent`를 실행하거나(개발용),
+   아래 "로컬 캡처 에이전트 설치 프로그램 만들기"로 만든 설치 파일을 나눠주면 된다(배포용) —
+   `config.py`의 기본값이 이미 이 Render 주소를 가리키므로 환경변수 설정이 따로 필요 없다.
 
 **무료 티어 특유의 제약** (알아두고 배포할 것):
 - 무료 웹 서비스는 일정 시간 요청이 없으면 슬립되고, 다음 요청 때 첫 응답이 수십 초 걸릴 수 있음.
 - 무료 티어는 영속 디스크를 지원하지 않아 **SQLite 파일이 재배포/재시작 시 초기화된다** — 계정과
   캡처 히스토리가 사라진다는 뜻. 데이터를 유지하려면 유료 플랜의 Persistent Disk를 추가하거나,
   `DATABASE_URL`을 Render의 무료 Postgres 애드온으로 바꾸는 것을 고려할 것.
+
+## 로컬 캡처 에이전트 설치 프로그램 만들기
+
+`agent/local_agent.py`는 이제 콘솔 창 대신 **시스템 트레이 아이콘**으로 동작한다(상태 텍스트,
+"지금 캡처", "히스토리 열기", "종료" 메뉴 제공) — Python/venv 설치 없이 실행되는 배포용 설치
+파일(`.exe`)을 만들 수 있다. 이전 PyQt5 시절의 PyInstaller 패키징과 같은 패턴이다.
+
+```powershell
+# 1) PyInstaller로 단일 실행파일 빌드 (agent_entry.py가 진입점 — repo 루트에 있어야
+#    agent.*, core.*, config 절대 임포트가 프로즌 상태에서도 정상 동작한다)
+pip install -r requirements.txt   # pyinstaller, pystray 포함
+pyinstaller --onefile --windowed --name UnityAIAssistantAgent agent_entry.py
+# 결과물: dist\UnityAIAssistantAgent.exe (Python 없이도 더블클릭으로 실행됨)
+
+# 2) 정식 설치 프로그램으로 감싸기 (Inno Setup, 무료: https://jrsoftware.org/isinfo.php)
+# Inno Setup 설치 후:
+& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\agent.iss
+# 결과물: dist_installer\UnityAIAssistantAgentSetup.exe
+```
+
+- `installer/agent.iss`는 Program Files에 설치, 시작 메뉴 바로가기, "Windows 시작 시 자동 실행"
+  선택 체크박스(기본 해제), 설치 후 바로 실행 옵션을 포함한다.
+- 이 설치 파일을 받는 사용자는 환경변수를 하나도 몰라도 된다 — `config.py`의 기본 URL이
+  이미 배포된 Render 주소를 가리키기 때문에, 실행 → 브라우저에서 로그인+기기 승인 → 핫키로
+  바로 쓸 수 있다.
+- 페어링 토큰은 `%APPDATA%\UnityAIAssistant\agent_config.json`에 저장된다 — 설치 프로그램
+  제거 시에도 이 파일은 남겨둔다(재설치해도 다시 승인할 필요 없도록).
 
 ## 남은 작업 (원래 1주 일정 기준, Day 1~3은 이 세션에서 완료)
 
