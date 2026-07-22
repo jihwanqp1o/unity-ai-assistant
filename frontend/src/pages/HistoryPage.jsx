@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
+import AgentOnboarding from "../components/AgentOnboarding";
 
 export default function HistoryPage() {
   const [sessions, setSessions] = useState([]);
@@ -12,11 +13,7 @@ export default function HistoryPage() {
   return (
     <div className="app-shell">
       <h2>캡처 히스토리</h2>
-      {sessions.length === 0 && (
-        <p style={{ color: "#9aa0a6" }}>
-          아직 캡처된 세션이 없습니다. 로컬 캡처 에이전트에서 핫키로 캡처해보세요.
-        </p>
-      )}
+      {sessions.length === 0 && <AgentOnboarding />}
       <ul className="session-list">
         {sessions.map((s) => (
           <li key={s.id}>

@@ -195,6 +195,13 @@ docker run -p 8000:8000 `
 "지금 캡처", "히스토리 열기", "종료" 메뉴 제공) — Python/venv 설치 없이 실행되는 배포용 설치
 파일(`.exe`)을 만들 수 있다. 이전 PyQt5 시절의 PyInstaller 패키징과 같은 패턴이다.
 
+**현재 배포된 다운로드**: 정식 Inno Setup 설치 프로그램은 아직 없고(로컬에 ISCC 컴파일러가
+없어 만들지 못함), 대신 1단계 산출물(PyInstaller 단일 exe, 설치 과정 없이 바로 실행)을
+GitHub Releases에 올려뒀다 — 웹앱의 "에이전트 다운로드" 버튼이 가리키는 주소:
+`https://github.com/jihwanqp1o/unity-ai-assistant/releases/latest/download/UnityAIAssistantAgent.exe`.
+새 버전을 릴리즈할 때는 같은 파일명으로 `gh release create <tag> dist/UnityAIAssistantAgent.exe`를
+실행하면 `/latest/download/...` 링크가 자동으로 최신 릴리즈를 가리킨다.
+
 ```powershell
 # 1) PyInstaller로 단일 실행파일 빌드 (agent_entry.py가 진입점 — repo 루트에 있어야
 #    agent.*, core.*, config 절대 임포트가 프로즌 상태에서도 정상 동작한다)
