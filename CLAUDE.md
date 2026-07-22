@@ -104,10 +104,11 @@ core/capture.py (mss screenshot)  ──POST──▶   JWT cookie)
      `pystray.Icon.run()` blocks the main thread (a hard requirement on Windows) — see
      `LocalCaptureAgent.run()`.
    - `on_capture()` debounces repeated triggers within 1.5s (`_CAPTURE_DEBOUNCE_SECONDS`):
-     `core/hotkey.py` used to fire on key-down, and holding Ctrl+Shift+C for even a moment
-     triggers OS key-repeat, causing a double capture. Fixed at the source too —
-     `keyboard.add_hotkey(..., trigger_on_release=True)` — but the debounce stays as a
-     cheap safety net.
+     `core/hotkey.py` originally used the `keyboard` library and fired on key-down, so
+     holding Ctrl+Shift+C for even a moment triggered OS key-repeat, causing a double
+     capture. `core/hotkey.py` was later rewritten entirely (see below) to use the Windows
+     `RegisterHotKey` API, which passes `MOD_NOREPEAT` and so no longer re-fires on its own
+     while the key is held — but the debounce stays as a cheap safety net.
    - Because it can be packaged `--windowed` (no console, see below), `agent/pairing.py`'s
      `_log()` guards every `print()` behind an `if sys.stdout is not None` check — a frozen
      windowed exe has `sys.stdout is None`, and an unguarded `print()` would crash it.
@@ -202,10 +203,23 @@ production uses Postgres — see the Known constraints below).
 
 **Windows-only, manually-verified modules** (no automated tests, verified by running the
 `__main__` block directly, or by running the agent end-to-end): `core/hotkey.py` (global
-hotkey via `keyboard` — works without admin rights in testing, contrary to the module's
-own docstring caveat), `core/capture.py` (real `mss` screen grab), and the whole
-`agent/local_agent.py` flow (hotkey → capture → pairing/upload → browser open). Verify
-these manually after touching them, since there's no headless test coverage for them.
+hotkey via the Windows `RegisterHotKey` API — works without admin rights), `core/capture.py`
+(real `mss` screen grab), and the whole `agent/local_agent.py` flow (hotkey → capture →
+pairing/upload → browser open). Verify these manually after touching them, since there's
+no headless test coverage for them.
+
+**`core/hotkey.py`'s `keyboard`→`RegisterHotKey` rewrite (2026-07-22):** on one real
+machine, the `keyboard` library's global low-level keyboard hook detected single keys
+(F9) fine but silently never fired for *any* Ctrl-based combo (Ctrl+Shift+C, Ctrl+Alt+C,
+even plain Ctrl+F9) — no exception, no log, just nothing, regardless of admin elevation
+or which window had focus. A minimal ctypes `RegisterHotKey`/`GetMessage` probe on the
+same machine detected the same combo immediately. Root cause was never fully pinned down
+(a suspect: security/remapping software intercepting modifier-key state that `keyboard`'s
+manual hook-based combo tracking depends on, which `RegisterHotKey` — a single OS-level
+registration instead of raw key-by-key state tracking — sidesteps entirely), but the fix
+was to stop relying on the `keyboard` package altogether. If you ever see "hotkey does
+nothing, no error, single keys work fine" again, this is the same class of bug — don't
+re-add `keyboard`.
 
 **Known constraints:**
 - The light RAG only knows what's curated into `data/unity_snippets.json` — it has no

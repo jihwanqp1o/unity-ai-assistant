@@ -80,7 +80,7 @@ unity-ai-assistant/
 │   ├── prompt_builder.py        # 프롬프트 조립 (외부 의존성 없음)
 │   ├── llm_client.py            # Gemini API 래퍼 (real/mock, 옛 claude_client.py)
 │   ├── capture.py               # 화면 캡처 (mss) — agent/에서 사용
-│   └── hotkey.py                 # 전역 단축키 (keyboard) — agent/에서 사용
+│   └── hotkey.py                 # 전역 단축키 (Windows RegisterHotKey API) — agent/에서 사용
 ├── agent/                       # 로컬 캡처 에이전트 (PyQt 없음, 백그라운드 콘솔 프로세스)
 │   ├── local_agent.py            # 핫키+캡처+세션 업로드+브라우저 오픈
 │   ├── pairing.py                 # device-code 페어링
