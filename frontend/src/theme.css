@@ -161,13 +161,30 @@ a {
   border-radius: 6px;
   background-color: #26282c;
   overflow: hidden;
+  display: flex;
+  align-items: stretch;
 }
 .session-item {
+  flex: 1;
+  min-width: 0;
   display: flex;
   gap: 12px;
   padding: 10px;
   color: inherit;
   text-decoration: none;
+}
+.session-delete-btn {
+  flex-shrink: 0;
+  border: none;
+  border-left: 1px solid #3f4147;
+  border-radius: 0;
+  background: transparent;
+  color: #9aa0a6;
+  padding: 0 14px;
+}
+.session-delete-btn:hover {
+  color: #f85149;
+  background-color: #2b2d31;
 }
 .session-item:hover {
   background-color: #2b2d31;

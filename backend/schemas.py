@@ -61,3 +61,18 @@ class AskRequest(BaseModel):
 class AskResponse(BaseModel):
     answer: str
     mock: bool
+
+
+class QuickCaptureIn(BaseModel):
+    """에이전트가 캡처 직후 네이티브 입력창에서 받은 질문을 스크린샷과 함께 한 번에 보낼 때 사용."""
+
+    screenshot_b64: str
+    question: str = Field(min_length=1)
+    code_paste: Optional[str] = None
+
+
+class QuickCaptureOut(BaseModel):
+    id: str
+    session_url: str
+    answer: str
+    mock: bool

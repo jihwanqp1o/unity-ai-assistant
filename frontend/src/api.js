@@ -24,6 +24,7 @@ export const api = {
   claimDevice: (code) => request(`/devices/pair/${code}/claim`, { method: "POST" }),
   getSession: (id) => request(`/sessions/${id}`),
   listSessions: () => request("/sessions"),
+  deleteSession: (id) => request(`/sessions/${id}`, { method: "DELETE" }),
   ask: (id, question, codePaste) =>
     request(`/sessions/${id}/ask`, {
       method: "POST",

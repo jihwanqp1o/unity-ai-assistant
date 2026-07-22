@@ -88,15 +88,26 @@ core/capture.py (mss screenshot)  ──POST──▶   JWT cookie)
    `device_code`, opens the frontend's `/pair?code=...` page in the browser, the logged-in
    user approves it, and the agent polls until it receives a long-lived bearer token
    (stored via `agent/agent_config.py` in `%APPDATA%/UnityAIAssistant/agent_config.json`).
-   On hotkey trigger (or the tray menu's "지금 캡처"), it captures a screenshot, `POST
-   /api/sessions` + `POST /api/sessions/{id}/screenshot` to the backend, then opens the
-   browser to the session's web page. **The local agent never sees `GEMINI_API_KEY`**
-   — only the backend does.
+   On hotkey trigger (or the tray menu's "지금 캡처"), it captures a screenshot, then shows
+   `agent/quick_dialog.py`'s native tkinter input box right there (over Unity, no browser
+   switch) asking for the question. If answered, it `POST`s `/api/sessions/quick` (device
+   auth) with screenshot + question in one call and gets the answer back immediately, then
+   opens the browser straight to the already-answered session — one Unity↔browser round
+   trip instead of two. If the dialog is cancelled, it falls back to the original flow
+   (`POST /api/sessions` + `POST /api/sessions/{id}/screenshot`, question typed in the web
+   UI). **The local agent never sees `GEMINI_API_KEY`** — only the backend does.
    - Uses `pystray` for the tray icon (status text as a disabled menu item, "지금 캡처",
      "히스토리 열기", "종료") since the process has no window and would otherwise be
-     invisible to the user. Pairing and hotkey registration happen in a background thread
-     (`_bootstrap`) because `pystray.Icon.run()` blocks the main thread (a hard requirement
-     on Windows) — see `LocalCaptureAgent.run()`.
+     invisible to the user — it also fires a tray notification once pairing/hotkey setup
+     finishes, since users couldn't otherwise tell the process had started. Pairing and
+     hotkey registration happen in a background thread (`_bootstrap`) because
+     `pystray.Icon.run()` blocks the main thread (a hard requirement on Windows) — see
+     `LocalCaptureAgent.run()`.
+   - `on_capture()` debounces repeated triggers within 1.5s (`_CAPTURE_DEBOUNCE_SECONDS`):
+     `core/hotkey.py` used to fire on key-down, and holding Ctrl+Shift+C for even a moment
+     triggers OS key-repeat, causing a double capture. Fixed at the source too —
+     `keyboard.add_hotkey(..., trigger_on_release=True)` — but the debounce stays as a
+     cheap safety net.
    - Because it can be packaged `--windowed` (no console, see below), `agent/pairing.py`'s
      `_log()` guards every `print()` behind an `if sys.stdout is not None` check — a frozen
      windowed exe has `sys.stdout is None`, and an unguarded `print()` would crash it.
@@ -114,12 +125,16 @@ core/capture.py (mss screenshot)  ──POST──▶   JWT cookie)
    - `devices.py`: the pairing endpoints described above (`Device` model in `models.py`);
      agent requests authenticate via `Authorization: Bearer <token>` checked against a
      sha256 hash of the token (`get_current_device` dependency), never a raw comparison.
-   - `sessions.py`: creates/reads capture sessions and — this is the load-bearing part —
-     wires the question-answering flow using **`core/rag.py`, `core/prompt_builder.py`
+   - `sessions.py`: creates/reads/deletes capture sessions and — this is the load-bearing
+     part — wires the question-answering flow using **`core/rag.py`, `core/prompt_builder.py`
      completely unchanged** from the desktop-app days, plus `core/llm_client.py` (Gemini,
-     originally Claude — see below). The `/ask` endpoint does exactly what the old
+     originally Claude — see below). `_answer_question()` does exactly what the old
      `main.py`'s `UnityAssistantApp.on_send()` used to do: `UnityDocRAG.search()` →
-     `format_context()` → `build_messages()`/`build_system_prompt()` → `LLMClient.ask()`.
+     `format_context()` → `build_messages()`/`build_system_prompt()` → `LLMClient.ask()` —
+     it's shared by two endpoints: `/ask` (User-cookie auth, question typed in the web UI)
+     and `/quick` (Device-token auth, screenshot+question submitted together by the agent's
+     native quick-ask popup — see `agent/quick_dialog.py`). `DELETE /{session_id}`
+     (User-cookie auth) removes a session outright.
    - `app.py`: mounts the routers, and if `frontend/dist` exists (i.e. `npm run build` was
      run), serves it as static files at `/` — so a single deployed process can serve both
      API and UI. The API routers register before the static mount, so `/api/*` always wins.
@@ -160,7 +175,10 @@ core/capture.py (mss screenshot)  ──POST──▶   JWT cookie)
   `backend/sessions.py` keeps a module-level singleton of this (and of `UnityDocRAG`),
   mirroring how the old `main.py`'s `UnityAssistantApp.__init__` did it. Default model is
   `gemini-2.5-flash` (`config.GEMINI_MODEL`) — deliberately not the `-latest` alias, which
-  Google can repoint without notice and has broken with 404s before.
+  Google can repoint without notice and has broken with 404s before. `max_tokens` defaults
+  to 4096 (`config.GEMINI_MAX_OUTPUT_TOKENS`) — it was 1024 originally and answers were
+  visibly getting cut off mid-sentence; if you see that again, this is the first thing to
+  check.
 
 **Test layout:** `tests/conftest.py` and `backend/tests/conftest.py` each insert the repo
 root onto `sys.path`, so tests import `core.*`/`backend.*` directly without the packages

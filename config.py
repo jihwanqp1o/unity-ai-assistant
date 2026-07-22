@@ -15,6 +15,8 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 # 이 환경변수만 바꿔서 업그레이드하면 된다("-latest" 별칭은 예고 없이 바뀌어 깨질 수 있어
 # 일부러 안 씀 — core/llm_client.py 참고).
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+# 답변이 문장 중간에 잘리던 문제(기본 1024 토큰)를 고치기 위해 늘려둔 값.
+GEMINI_MAX_OUTPUT_TOKENS = int(os.environ.get("GEMINI_MAX_OUTPUT_TOKENS", "4096"))
 
 # Q4/Q5에서 정의한 범위: 온디맨드 캡처 단축키
 CAPTURE_HOTKEY = os.environ.get("CAPTURE_HOTKEY", "ctrl+shift+c")

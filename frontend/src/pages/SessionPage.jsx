@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
 import ChatLog from "../components/ChatLog";
 import CodePanel from "../components/CodePanel";
@@ -9,6 +9,7 @@ import { formatDateTime } from "../lib/format";
 
 export default function SessionPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [session, setSession] = useState(null);
   const [messages, setMessages] = useState([]);
   const [question, setQuestion] = useState("");
@@ -59,6 +60,16 @@ export default function SessionPage() {
     setStatus("코드가 클립보드에 복사되었습니다");
   }
 
+  async function handleDelete() {
+    if (!window.confirm("이 캡처 기록을 삭제할까요? 되돌릴 수 없어요.")) return;
+    try {
+      await api.deleteSession(id);
+      navigate("/app/history");
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
   if (error) return <div className="app-shell error-text">{error}</div>;
   if (!session) return <div className="app-shell">불러오는 중...</div>;
 
@@ -67,6 +78,7 @@ export default function SessionPage() {
       <div className="top-row">
         <span className="section-label">{formatDateTime(session.created_at)} 캡처</span>
         <StatusBadge text={status} />
+        <button onClick={handleDelete}>🗑 삭제</button>
       </div>
       {session.screenshot_b64 && (
         <img

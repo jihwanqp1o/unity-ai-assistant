@@ -36,7 +36,10 @@ class HotkeyListener:
                 "Windows에서는 관리자 권한 실행이 필요할 수 있습니다."
             ) from e
 
-        keyboard.add_hotkey(self.hotkey, on_trigger)
+        # trigger_on_release=True: 키를 누르고 있는 도중 OS가 auto-repeat로 key-down
+        # 이벤트를 여러 번 보내면(길게 눌렀을 때 흔함) on_trigger가 중복 호출되는 문제가
+        # 있었다. release는 물리적으로 키를 뗄 때 한 번만 발생하므로 이 문제가 없다.
+        keyboard.add_hotkey(self.hotkey, on_trigger, trigger_on_release=True)
         self._registered = True
 
     def stop(self) -> None:

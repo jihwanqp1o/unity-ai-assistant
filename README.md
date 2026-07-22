@@ -132,7 +132,10 @@ npm run dev
 $env:BACKEND_BASE_URL = "http://localhost:8000"
 python -m agent.local_agent
 # 최초 실행 시 브라우저가 열려 로그인+기기 승인을 요청한다. 이후 CAPTURE_HOTKEY(기본
-# Ctrl+Shift+C)를 누르면 화면을 캡처해 세션을 만들고 브라우저 탭을 연다.
+# Ctrl+Shift+C, 또는 트레이 아이콘 우클릭 → "지금 캡처")를 트리거하면 화면을 캡처하고
+# Unity 위에 작은 질문 입력창이 뜬다 — 여기서 질문을 적어 전송하면 스크린샷+질문을 한 번에
+# 보내 답변까지 받은 뒤 브라우저를 연다(전환 1회). 입력창을 취소하면 예전처럼 스크린샷만
+# 올리고 브라우저에서 질문을 입력받는다(전환 2회).
 
 # 6) API 키 연결 후 real 모드로 전환 (백엔드 프로세스 기준)
 # 무료 키 발급: https://aistudio.google.com/apikey
@@ -251,5 +254,7 @@ pyinstaller --onefile --windowed --name UnityAIAssistantAgent agent_entry.py
 - 라이트 RAG는 스니펫 20~40개 범위 내에서만 정확 — 데모 시나리오 밖 질문은 정확도가 떨어질 수 있음
 - 기기 페어링 코드(`device_code`)에 만료 시간이 없음 — MVP 범위 결정, 운영 전환 시 TTL/재사용
   방지 추가 필요 (`backend/devices.py` 참고)
-- 세션 스크린샷은 SQLite에 base64 텍스트로 저장 — 사용자·세션 수가 늘면 객체 스토리지(S3 등)로
+- 세션 스크린샷은 DB에 base64 텍스트로 저장 — 사용자·세션 수가 늘면 객체 스토리지(S3 등)로
   옮기는 것을 고려해야 함
+- `agent/quick_dialog.py`의 네이티브 입력창은 tkinter로 만들어졌다 — 헤드리스 환경에서는
+  실행 확인 불가, Windows에서 직접 확인 필요 (core/hotkey.py, core/capture.py와 같은 분류)

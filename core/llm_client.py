@@ -28,7 +28,7 @@ class LLMClient:
         api_key: Optional[str] = None,
         model: str = "gemini-2.5-flash",
         mock: Optional[bool] = None,
-        max_tokens: int = 1024,
+        max_tokens: int = 4096,  # 1024였을 때 답변이 문장 중간에 잘리는 문제가 있었음
     ):
         self.api_key = api_key or os.environ.get("GEMINI_API_KEY")
         self.model = model

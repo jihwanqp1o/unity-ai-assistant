@@ -3,10 +3,14 @@ agent/local_agent.py
 ----------------------
 로컬 캡처 에이전트 (PyQt 없음, 시스템 트레이 아이콘 기반 백그라운드 프로세스).
 
-전역 핫키(core/hotkey.py)로 화면을 캡처(core/capture.py)하고, 배포된 백엔드에 세션을
-만들어 스크린샷을 올린 뒤, 기본 브라우저로 그 세션의 웹 페이지를 연다. 질문 입력/답변
-표시/코드 패널은 모두 웹(React) 쪽에서 처리하며, 이 에이전트는 캡처+핫키 감지+상태
-표시(트레이 아이콘)만 담당한다.
+전역 핫키(core/hotkey.py)로 화면을 캡처(core/capture.py)한 뒤, 캡처 직후 작은 네이티브
+입력창(agent/quick_dialog.py)으로 질문을 바로 받아 스크린샷과 함께 백엔드에 보내고,
+답변까지 받고 나서 브라우저를 연다 — Unity↔브라우저 전환을 캡처당 한 번으로 줄이기
+위함(예전에는 캡처→브라우저 전환→질문 입력→다시 확인, 총 두 번 왔다갔다 해야 했다).
+입력창에서 취소하면(질문 없이 나중에 물어보고 싶을 때) 예전처럼 스크린샷만 올리고
+브라우저에서 질문을 입력받는 흐름으로 자동 전환된다. 답변 표시/코드 패널은 모두 웹
+(React) 쪽에서 처리하며, 이 에이전트는 캡처+질문 입력+핫키 감지+상태 표시(트레이
+아이콘)만 담당한다.
 
 트레이 아이콘을 쓰는 이유: 이 프로세스는 창이 없는 백그라운드 프로그램이라 실행 중인지
 아닌지 한눈에 알기 어렵다. 트레이 메뉴가 상태 텍스트(대기/캡처 중/실패 등)를 보여주고,
@@ -26,6 +30,7 @@ agent/local_agent.py
 from __future__ import annotations
 
 import threading
+import time
 import webbrowser
 from typing import Optional
 
@@ -34,9 +39,12 @@ import requests
 
 from agent.agent_config import load_device_token, save_device_token
 from agent.pairing import pair_device
+from agent.quick_dialog import ask_question
 from config import BACKEND_BASE_URL, CAPTURE_HOTKEY, FRONTEND_BASE_URL
 from core.capture import ScreenCapture
 from core.hotkey import HotkeyListener
+
+_ANSWER_PREVIEW_LENGTH = 150
 
 
 def _build_tray_image():
@@ -50,12 +58,16 @@ def _build_tray_image():
     return img
 
 
+_CAPTURE_DEBOUNCE_SECONDS = 1.5
+
+
 class LocalCaptureAgent:
     def __init__(self):
         self.capture = ScreenCapture()
         self.hotkey = HotkeyListener(hotkey=CAPTURE_HOTKEY)
         self.device_token: Optional[str] = None
         self.status_text = "시작하는 중..."
+        self._last_capture_at: float = 0.0
 
         self._icon = pystray.Icon(
             "unity_ai_assistant",
@@ -119,6 +131,13 @@ class LocalCaptureAgent:
             self._set_status("아직 기기 페어링이 끝나지 않았습니다")
             return
 
+        # 안전장치: 키보드 auto-repeat나 실수로 인한 겹친 트리거를 무시한다
+        # (core/hotkey.py가 release 시점으로 바꿨지만, 방어적으로 한 번 더 막아둔다).
+        now = time.monotonic()
+        if now - self._last_capture_at < _CAPTURE_DEBOUNCE_SECONDS:
+            return
+        self._last_capture_at = now
+
         self._set_status("캡처 중...")
         try:
             result = self.capture.capture()
@@ -126,6 +145,36 @@ class LocalCaptureAgent:
             self._set_status(f"캡처 실패: {e}")
             return
 
+        # 캡처 직후 바로 질문을 받는다 (Unity 위에 뜨는 작은 입력창, 블로킹).
+        # 여기서 취소/빈 채로 닫으면 기존 방식(브라우저에서 질문 입력)으로 넘어간다.
+        question = ask_question()
+        if question:
+            self._quick_capture_and_ask(result, question)
+        else:
+            self._capture_only(result)
+
+    def _quick_capture_and_ask(self, result, question: str) -> None:
+        self._set_status("분석 중...")
+        try:
+            resp = requests.post(
+                f"{BACKEND_BASE_URL}/api/sessions/quick",
+                json={"screenshot_b64": result.to_base64(), "question": question},
+                headers=self._headers(),
+                timeout=60,  # 실제 LLM 응답은 수 초~수십 초 걸릴 수 있음
+            )
+            resp.raise_for_status()
+            body = resp.json()
+        except requests.RequestException as e:
+            self._set_status(f"분석 요청 실패: {e}")
+            return
+
+        self._set_status("답변 완료 (MOCK 모드)" if body["mock"] else "답변 완료")
+        answer = body["answer"]
+        preview = answer if len(answer) <= _ANSWER_PREVIEW_LENGTH else answer[:_ANSWER_PREVIEW_LENGTH] + "…"
+        self._icon.notify(preview, "Unity AI Assistant 답변 완료")
+        webbrowser.open(body["session_url"])
+
+    def _capture_only(self, result) -> None:
         try:
             create_resp = requests.post(
                 f"{BACKEND_BASE_URL}/api/sessions", headers=self._headers(), timeout=10

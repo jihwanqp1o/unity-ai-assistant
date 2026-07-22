@@ -20,6 +20,16 @@ export default function HistoryPage() {
       .catch(() => setSessions([]));
   }, []);
 
+  async function handleDelete(id) {
+    if (!window.confirm("이 캡처 기록을 삭제할까요? 되돌릴 수 없어요.")) return;
+    try {
+      await api.deleteSession(id);
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
   if (sessions === null) {
     return (
       <div className="app-shell">
@@ -60,6 +70,14 @@ export default function HistoryPage() {
                   </div>
                 </div>
               </Link>
+              <button
+                className="session-delete-btn"
+                onClick={() => handleDelete(s.id)}
+                title="삭제"
+                aria-label="삭제"
+              >
+                🗑
+              </button>
             </li>
           );
         })}
