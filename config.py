@@ -2,16 +2,19 @@
 config.py
 ----------
 프로젝트 전역 설정. 환경변수 기반으로 API 키를 읽어오며, 키가 없으면
-core/claude_client.py가 자동으로 mock 모드로 동작한다.
+core/llm_client.py가 자동으로 mock 모드로 동작한다.
 
 사용법 (Windows, VSCode 터미널 기준):
-    setx ANTHROPIC_API_KEY "sk-ant-..."   # 새 터미널부터 적용
+    setx GEMINI_API_KEY "..."   # https://aistudio.google.com/apikey 에서 무료 발급, 새 터미널부터 적용
     또는 프로젝트 루트에 .env 파일을 만들고 python-dotenv로 로드해도 됨(선택 사항).
 """
 import os
 
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
-CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-5")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+# gemini-2.5-flash: 무료 티어에서 쓸 수 있는 안정 버전. Google이 모델을 새로 내놓으면
+# 이 환경변수만 바꿔서 업그레이드하면 된다("-latest" 별칭은 예고 없이 바뀌어 깨질 수 있어
+# 일부러 안 씀 — core/llm_client.py 참고).
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
 # Q4/Q5에서 정의한 범위: 온디맨드 캡처 단축키
 CAPTURE_HOTKEY = os.environ.get("CAPTURE_HOTKEY", "ctrl+shift+c")

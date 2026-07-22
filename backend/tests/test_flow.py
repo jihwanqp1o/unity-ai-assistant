@@ -1,6 +1,6 @@
 """회원가입 -> 기기 페어링 -> 세션 생성/스크린샷 업로드 -> 질문 전체 흐름 테스트.
 
-ANTHROPIC_API_KEY가 없는 테스트 환경에서는 core/claude_client.py가 자동으로 mock 모드로
+GEMINI_API_KEY가 없는 테스트 환경에서는 core/llm_client.py가 자동으로 mock 모드로
 동작하므로, RAG가 올바른 문서를 찾았는지는 mock 응답 문자열에 포함된 문서 제목으로 검증한다.
 """
 

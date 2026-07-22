@@ -11,7 +11,7 @@ services:
     dockerfilePath: ./Dockerfile
     plan: free
     envVars:
-      - key: ANTHROPIC_API_KEY
+      - key: GEMINI_API_KEY
         sync: false # Render 대시보드에서 직접 입력 (리포에 커밋되지 않는 비밀값)
       - key: JWT_SECRET
         generateValue: true # Render가 32바이트 이상의 랜덤 값을 자동 생성

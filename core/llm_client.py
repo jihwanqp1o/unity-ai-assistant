@@ -1,32 +1,36 @@
 """
-core/claude_client.py
-----------------------
-Claude API 래퍼. 실제 API 키가 없어도(mock=True) 파이프라인 전체를 테스트할 수 있도록
+core/llm_client.py
+--------------------
+Gemini API 래퍼. 실제 API 키가 없어도(mock=True) 파이프라인 전체를 테스트할 수 있도록
 real/mock 두 모드를 지원한다.
 
-설계 이유 (1주 MVP 결정):
-- 이번 세션 시점에는 API 키가 없는 상태(mock 모드)로 개발을 시작한다.
-- anthropic 패키지는 real 모드를 사용할 때만 import하므로, 패키지가 설치되지 않았거나
+설계 이유 (Claude에서 Gemini로 교체, 무료 티어 활용):
+- core/prompt_builder.py는 특정 벤더에 묶이지 않은 범용 메시지 포맷(role + text/image
+  content blocks)만 만든다. 이 모듈이 그 포맷을 Gemini API의 `contents` 구조로 변환하는
+  책임을 진다 — 나중에 벤더를 또 바꾸더라도 prompt_builder.py는 그대로 두면 된다.
+- google-genai 패키지는 real 모드를 사용할 때만 import하므로, 패키지가 설치되지 않았거나
   키가 없는 환경에서도 mock 모드 테스트/실행은 항상 가능하다.
-- 실제 키를 얻으면 ANTHROPIC_API_KEY 환경변수만 설정하면 자동으로 real 모드로 전환된다
-  (config.py 참조).
+- 실제 키를 얻으면 GEMINI_API_KEY 환경변수만 설정하면 자동으로 real 모드로 전환된다
+  (config.py 참조). Gemini API 키는 https://aistudio.google.com/apikey 에서 무료로 발급받을
+  수 있고, gemini-2.5-flash는 무료 티어 한도 내에서 쓸 수 있다.
 """
 from __future__ import annotations
 
+import base64
 import os
 import re
 from typing import List, Dict, Any, Optional
 
 
-class ClaudeClient:
+class LLMClient:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "claude-sonnet-4-5",
+        model: str = "gemini-2.5-flash",
         mock: Optional[bool] = None,
         max_tokens: int = 1024,
     ):
-        self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+        self.api_key = api_key or os.environ.get("GEMINI_API_KEY")
         self.model = model
         self.max_tokens = max_tokens
         # mock 인자를 명시하지 않으면 API 키 존재 여부로 자동 판단한다.
@@ -42,28 +46,57 @@ class ClaudeClient:
     # ------------------------------------------------------------------
     def _real_ask(self, messages: List[Dict[str, Any]], system: str) -> str:
         try:
-            import anthropic  # 지연 import: mock 모드에서는 설치 여부와 무관하게 동작
+            from google import genai
+            from google.genai import types
         except ImportError as e:
             raise RuntimeError(
-                "anthropic 패키지가 설치되어 있지 않습니다. `pip install anthropic`으로 설치하세요."
+                "google-genai 패키지가 설치되어 있지 않습니다. `pip install google-genai`로 설치하세요."
             ) from e
 
         if not self.api_key:
             raise RuntimeError(
-                "ANTHROPIC_API_KEY가 설정되어 있지 않습니다. 환경변수를 설정하거나 "
-                "ClaudeClient(api_key=...)로 직접 전달하세요."
+                "GEMINI_API_KEY가 설정되어 있지 않습니다. 환경변수를 설정하거나 "
+                "LLMClient(api_key=...)로 직접 전달하세요."
             )
 
-        client = anthropic.Anthropic(api_key=self.api_key)
-        response = client.messages.create(
+        client = genai.Client(api_key=self.api_key)
+        response = client.models.generate_content(
             model=self.model,
-            max_tokens=self.max_tokens,
-            system=system,
-            messages=messages,
+            contents=self._to_gemini_parts(messages),
+            config=types.GenerateContentConfig(
+                system_instruction=system,
+                max_output_tokens=self.max_tokens,
+            ),
         )
-        # content는 블록 리스트이며 text 타입 블록만 이어붙인다.
-        parts = [block.text for block in response.content if getattr(block, "type", None) == "text"]
-        return "\n".join(parts)
+        return response.text or ""
+
+    @staticmethod
+    def _to_gemini_parts(messages: List[Dict[str, Any]]) -> List[Any]:
+        """core/prompt_builder.py의 범용 content blocks를 Gemini `contents` 리스트로 변환한다.
+
+        지금은 build_messages()가 항상 user 메시지 1개만 만들기 때문에 role 구분 없이
+        평평한 Part 리스트로 넘겨도 충분하다 (SDK가 단일 user 턴으로 취급한다).
+        """
+        from google.genai import types
+
+        parts: List[Any] = []
+        for message in messages:
+            content = message.get("content", [])
+            if isinstance(content, str):
+                parts.append(content)
+                continue
+            for block in content:
+                if block.get("type") == "text":
+                    parts.append(block.get("text", ""))
+                elif block.get("type") == "image":
+                    source = block.get("source", {})
+                    parts.append(
+                        types.Part.from_bytes(
+                            data=base64.b64decode(source.get("data", "")),
+                            mime_type=source.get("media_type", "image/png"),
+                        )
+                    )
+        return parts
 
     # ------------------------------------------------------------------
     # Mock mode - API 키 없이 파이프라인(검색→프롬프트→응답) 자체를 검증하기 위한 모드.
@@ -77,7 +110,7 @@ class ClaudeClient:
         has_image = self._has_image(messages)
 
         lines = [
-            "[MOCK 응답 - ANTHROPIC_API_KEY 미설정, 실제 LLM 호출 없음]",
+            "[MOCK 응답 - GEMINI_API_KEY 미설정, 실제 LLM 호출 없음]",
             f"질문 요약: {question.strip() if question else '(질문을 추출하지 못함)'}",
         ]
         if has_image:
@@ -87,7 +120,7 @@ class ClaudeClient:
             lines.append(f"주의사항: {doc_pitfall}")
         else:
             lines.append("관련 Unity 문서를 찾지 못해 일반적인 답변만 가능합니다. (실제 키 연결 후 재확인 필요)")
-        lines.append("실제 코드 제안은 ANTHROPIC_API_KEY 연결 후 real 모드에서 확인하세요.")
+        lines.append("실제 코드 제안은 GEMINI_API_KEY 연결 후 real 모드에서 확인하세요.")
         return "\n".join(lines)
 
     @staticmethod
@@ -140,9 +173,9 @@ if __name__ == "__main__":
     matches = rag.search("점프가 두 번 눌려도 한 번만 되는데 isGrounded 관련인 것 같아요")
     context = rag.format_context(matches)
     messages = build_messages(
-        user_question="점프가 두 번 눌려도 한 번만 되는데 왜 그런지 화면 보고 알려줘",
+        user_question="점프가 두 번 눌려도 한 번만 되는지 화면 보고 알려줘",
         rag_context=context,
     )
-    client = ClaudeClient()  # 키 없음 -> 자동 mock 모드
+    client = LLMClient()  # 키 없음 -> 자동 mock 모드
     print("mock 모드 여부:", client.mock)
     print(client.ask(messages, system=build_system_prompt()))

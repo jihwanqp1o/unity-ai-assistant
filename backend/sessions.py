@@ -4,9 +4,9 @@ backend/sessions.py
 캡처 세션 CRUD + 질문 응답. 로컬 에이전트가 세션을 만들고 스크린샷을 올리면(Device 인증),
 React 프론트엔드가 그 세션을 읽고 질문을 보낸다(User 쿠키 인증).
 
-질문 응답 로직은 기존 core/rag.py, core/prompt_builder.py, core/claude_client.py를
-변경 없이 그대로 재사용한다 — main.py의 UnityAssistantApp.on_send()와 동일한 순서
-(RAG 검색 → 컨텍스트 포맷 → 메시지 빌드 → Claude 호출).
+질문 응답 로직은 기존 core/rag.py, core/prompt_builder.py를 변경 없이 그대로 재사용하고,
+LLM 호출은 core/llm_client.py(Gemini)를 통한다 — 옛 main.py의 UnityAssistantApp.on_send()와
+동일한 순서 (RAG 검색 → 컨텍스트 포맷 → 메시지 빌드 → LLM 호출).
 """
 from __future__ import annotations
 
@@ -20,15 +20,15 @@ from backend.db import get_db
 from backend.devices import get_current_device
 from backend.models import CaptureSession, Device, User
 from backend.schemas import AskRequest, AskResponse, ScreenshotIn, SessionCreateOut, SessionOut
-from config import FRONTEND_BASE_URL, RAG_MIN_SCORE, RAG_TOP_K
-from core.claude_client import ClaudeClient
+from config import FRONTEND_BASE_URL, GEMINI_MODEL, RAG_MIN_SCORE, RAG_TOP_K
+from core.llm_client import LLMClient
 from core.prompt_builder import build_messages, build_system_prompt
 from core.rag import UnityDocRAG
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
 _rag = UnityDocRAG()
-_client = ClaudeClient()
+_client = LLMClient(model=GEMINI_MODEL)
 
 
 def _get_owned_session(session_id: str, user_id: int, db: DbSession) -> CaptureSession:

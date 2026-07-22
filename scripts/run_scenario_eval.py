@@ -8,8 +8,8 @@ scripts/run_scenario_eval.py
 측정 방식:
   1) data/test_scenarios.json의 각 시나리오 질문에 대해 라이트 RAG(core/rag.py)가
      정답 스니펫(expected_snippet_id)을 top-1으로 정확히 찾는지 확인한다.
-  2) 찾았다면 ClaudeClient(mock 또는 real)로 실제 파이프라인을 끝까지 실행해
-     응답을 생성한다.
+  2) 찾았다면 LLMClient(mock 또는 real, core/llm_client.py — Gemini)로 실제 파이프라인을
+     끝까지 실행해 응답을 생성한다.
   3) top-1 정답률을 Q6 성공지표의 1차 근사치로 리포트한다.
 
 주의: API 키가 없는 상태(mock 모드)에서는 "RAG가 올바른 문서를 찾았는가"까지만
@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from core.rag import UnityDocRAG  # noqa: E402
-from core.claude_client import ClaudeClient  # noqa: E402
+from core.llm_client import LLMClient  # noqa: E402
 from core.prompt_builder import build_messages, build_system_prompt  # noqa: E402
 
 
@@ -39,9 +39,9 @@ def load_scenarios() -> list[dict]:
 def main() -> None:
     scenarios = load_scenarios()
     rag = UnityDocRAG()
-    client = ClaudeClient()
+    client = LLMClient()
 
-    print(f"총 {len(scenarios)}개 시나리오 평가 시작 (Claude 모드: {'MOCK' if client.mock else 'REAL'})\n")
+    print(f"총 {len(scenarios)}개 시나리오 평가 시작 (Gemini 모드: {'MOCK' if client.mock else 'REAL'})\n")
 
     correct = 0
     results = []
@@ -82,7 +82,7 @@ def main() -> None:
     if client.mock:
         print(
             "\n※ 현재 MOCK 모드입니다. 이 수치는 '라이트 RAG 검색 정확도'만 측정한 것이며,\n"
-            "   실제 LLM 코드 생성 품질은 ANTHROPIC_API_KEY 연결 후 real 모드로 재평가해야 합니다."
+            "   실제 LLM 코드 생성 품질은 GEMINI_API_KEY 연결 후 real 모드로 재평가해야 합니다."
         )
 
 
