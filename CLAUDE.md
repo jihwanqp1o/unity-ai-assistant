@@ -111,6 +111,18 @@ core/capture.py (mss screenshot)  ──POST──▶   JWT cookie)
    - Because it can be packaged `--windowed` (no console, see below), `agent/pairing.py`'s
      `_log()` guards every `print()` behind an `if sys.stdout is not None` check — a frozen
      windowed exe has `sys.stdout is None`, and an unguarded `print()` would crash it.
+   - **Self-updating** (`agent/updater.py`): on every startup (and via the tray's "업데이트
+     확인"), it checks the GitHub Releases API and compares the release tag against
+     `agent.__version__`. Only does anything when `sys.frozen` is set (i.e. running as the
+     packaged exe, never for `python -m agent.local_agent` from source — there's no exe to
+     replace). If newer, downloads the new exe to a temp dir and hands off to a generated
+     `.bat` script that waits for this process's PID to exit, moves the new exe over
+     `sys.executable`, and relaunches it — Windows won't let a running exe overwrite itself
+     directly. The pairing token lives in `%APPDATA%` so it survives the swap; no
+     re-approval needed. **Every new agent release must bump `agent/__init__.py`'s
+     `__version__` to match the `agent-vX.Y.Z` git tag** — the updater compares those two
+     directly, so forgetting the bump means that release is silently never detected as an
+     update.
    - **Packaging**: `agent_entry.py` (repo root, not inside `agent/`) is the PyInstaller
      entry point — a thin wrapper so `agent.*`/`core.*`/`config` absolute imports resolve
      correctly once frozen (mirrors where the old `main.py` used to live). `installer/agent.iss`

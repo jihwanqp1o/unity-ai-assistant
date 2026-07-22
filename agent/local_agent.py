@@ -77,6 +77,7 @@ class LocalCaptureAgent:
                 pystray.MenuItem(lambda item: self.status_text, None, enabled=False),
                 pystray.MenuItem("지금 캡처", self._handle_capture_clicked),
                 pystray.MenuItem("히스토리 열기", self._handle_open_history),
+                pystray.MenuItem("업데이트 확인", self._handle_check_update),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("종료", self._handle_quit),
             ),
@@ -120,10 +121,38 @@ class LocalCaptureAgent:
             "Unity AI Assistant 준비 완료",
         )
 
+        # 자동 업데이트 확인. 실패해도(네트워크 문제 등) 에이전트 자체는 계속 정상 동작해야
+        # 하므로 예외를 조용히 삼킨다 — python -m agent.local_agent(소스 실행)에서는
+        # updater.check_for_update()가 항상 None을 반환해 아무 일도 일어나지 않는다.
+        try:
+            self._check_for_update()
+        except Exception:  # noqa: BLE001
+            pass
+
     def _notify_pair_url(self, pair_url: str) -> None:
         self._icon.notify(
             f"브라우저에서 이 기기를 승인해주세요:\n{pair_url}", "Unity AI Assistant - 기기 승인 필요"
         )
+
+    def _check_for_update(self, notify_if_up_to_date: bool = False) -> None:
+        from agent.updater import apply_update, check_for_update
+
+        update = check_for_update()
+        if not update:
+            if notify_if_up_to_date:
+                self._icon.notify("이미 최신 버전입니다.", "Unity AI Assistant")
+            return
+
+        self._set_status(f"새 버전 {update['version']} 설치 중...")
+        self._icon.notify(
+            f"새 버전 {update['version']}을 설치합니다. 잠시 후 자동으로 다시 시작됩니다.",
+            "Unity AI Assistant 자동 업데이트",
+        )
+        if apply_update(update["download_url"]):
+            self.hotkey.stop()
+            self._icon.stop()
+        else:
+            self._set_status("업데이트 다운로드 실패 - 기존 버전으로 계속 실행합니다")
 
     # ------------------------------------------------------------------
     def on_capture(self) -> None:
@@ -202,6 +231,15 @@ class LocalCaptureAgent:
 
     def _handle_open_history(self, icon, item) -> None:
         webbrowser.open(f"{FRONTEND_BASE_URL}/app/history")
+
+    def _handle_check_update(self, icon, item) -> None:
+        def _run():
+            try:
+                self._check_for_update(notify_if_up_to_date=True)
+            except Exception as e:  # noqa: BLE001
+                self._icon.notify(f"업데이트 확인 실패: {e}", "Unity AI Assistant")
+
+        threading.Thread(target=_run, daemon=True).start()
 
     def _handle_quit(self, icon, item) -> None:
         self.hotkey.stop()

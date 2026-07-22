@@ -211,8 +211,19 @@ docker run -p 8000:8000 `
 없어 만들지 못함), 대신 1단계 산출물(PyInstaller 단일 exe, 설치 과정 없이 바로 실행)을
 GitHub Releases에 올려뒀다 — 웹앱의 "에이전트 다운로드" 버튼이 가리키는 주소:
 `https://github.com/jihwanqp1o/unity-ai-assistant/releases/latest/download/UnityAIAssistantAgent.exe`.
-새 버전을 릴리즈할 때는 같은 파일명으로 `gh release create <tag> dist/UnityAIAssistantAgent.exe`를
-실행하면 `/latest/download/...` 링크가 자동으로 최신 릴리즈를 가리킨다.
+
+**설치된 에이전트는 자동 업데이트된다** (`agent/updater.py`) — 실행할 때마다(또는 트레이
+메뉴의 "업데이트 확인"으로 수동으로도) GitHub의 최신 릴리즈 태그를 확인해서, 더 새 버전이
+있으면 자동으로 받아 교체하고 재시작한다. 따라서 **새 버전을 릴리즈할 때는 반드시 아래
+두 가지를 함께 맞춰야 한다**:
+
+1. `agent/__init__.py`의 `__version__`을 올린다 (예: `"1.2.0"`)
+2. 같은 번호로 GitHub Release 태그를 만든다: `gh release create agent-v1.2.0 dist/UnityAIAssistantAgent.exe --title "..." --notes "..."`
+   (파일명은 항상 `UnityAIAssistantAgent.exe`로 동일해야 `/latest/download/...` 링크와
+   업데이트 로직이 모두 정상 동작한다)
+
+`__version__`을 안 올리고 릴리즈만 새로 하면, 에이전트가 그 릴리즈를 "새 버전 아님"으로
+착각해 업데이트가 조용히 무시된다.
 
 ```powershell
 # 1) PyInstaller로 단일 실행파일 빌드 (agent_entry.py가 진입점 — repo 루트에 있어야
